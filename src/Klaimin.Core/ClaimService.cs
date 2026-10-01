@@ -9,7 +9,7 @@ public record ReceiptEntry(long Total, DateOnly Date, int CategoryId, IReadOnlyL
 public record Problem(string Field, string Message);
 
 /// <summary>Owns a claim from its first draft onwards. Status and visibility rules live here and on <see cref="Claim"/>.</summary>
-public class ClaimService(KlaiminDb db)
+public class ClaimService(KlaiminDb db, ReceiptImages images)
 {
     public Task<List<Claim>> MineAsync(string claimantId) =>
         db.Claims.Include(claim => claim.Receipts)
@@ -52,14 +52,15 @@ public class ClaimService(KlaiminDb db)
         return found?.CanBeSeenBy(viewer) == true ? found : null;
     }
 
-    public async Task<Receipt?> FindReceiptAsync(int receiptId, Viewer viewer)
+    /// <summary>A receipt together with its claim, or null when the viewer may not see the claim.</summary>
+    public async Task<(Claim Claim, Receipt Receipt)?> FindReceiptAsync(int receiptId, Viewer viewer)
     {
         var claimId = await db.Receipts
             .Where(receipt => receipt.Id == receiptId)
             .Select(receipt => (int?)receipt.ClaimId)
             .FirstOrDefaultAsync();
         var claim = claimId is null ? null : await FindAsync(claimId.Value, viewer);
-        return claim?.Receipts.Single(receipt => receipt.Id == receiptId);
+        return claim is null ? null : (claim, claim.Receipts.Single(receipt => receipt.Id == receiptId));
     }
 
     /// <summary>Turns a stored image and the fields the claimant confirmed into a receipt on the claim.</summary>
@@ -67,11 +68,7 @@ public class ClaimService(KlaiminDb db)
     {
         RequireEditable(claim, actorId);
 
-        if (entry.Total <= 0) return new("Total", "The receipt total must be more than Rp 0.");
-        if (entry.Date > DateOnly.FromDateTime(DateTime.Now))
-            return new("Date", "The receipt date cannot be in the future.");
-        if (!await db.Categories.AnyAsync(category => category.Id == entry.CategoryId && category.IsActive))
-            return new("CategoryId", "Choose a category from the list.");
+        if (await CheckAsync(entry) is { } problem) return problem;
         if (await db.Receipts.AnyAsync(receipt => receipt.ImageFile == image.File))
             return new("", "This photo is already saved as a receipt. Upload the next receipt instead.");
 
@@ -85,6 +82,51 @@ public class ClaimService(KlaiminDb db)
             LineItems = [.. entry.LineItems],
         });
         await db.SaveChangesAsync();
+        return null;
+    }
+
+    public async Task<Problem?> UpdateReceiptAsync(Claim claim, string actorId, Receipt receipt, ReceiptEntry entry)
+    {
+        RequireEditable(claim, actorId);
+
+        if (await CheckAsync(entry) is { } problem) return problem;
+
+        receipt.Total = entry.Total;
+        receipt.Date = entry.Date;
+        receipt.CategoryId = entry.CategoryId;
+        receipt.LineItems = [.. entry.LineItems];
+        await db.SaveChangesAsync();
+        return null;
+    }
+
+    public async Task RemoveReceiptAsync(Claim claim, string actorId, Receipt receipt)
+    {
+        RequireEditable(claim, actorId);
+
+        claim.Receipts.Remove(receipt);
+        await db.SaveChangesAsync();
+        images.Delete(receipt.ImageFile);
+    }
+
+    public async Task DeleteAsync(Claim claim, string actorId)
+    {
+        if (!claim.CanBeDeletedBy(actorId))
+            throw new InvalidOperationException($"Claim {claim.Id} cannot be deleted by this person in status {claim.Status}.");
+
+        var files = claim.Receipts.Select(receipt => receipt.ImageFile).ToList();
+        db.Claims.Remove(claim);
+        await db.SaveChangesAsync();
+        // Files go last: a failed save must not leave receipts pointing at images that are gone.
+        files.ForEach(images.Delete);
+    }
+
+    private async Task<Problem?> CheckAsync(ReceiptEntry entry)
+    {
+        if (entry.Total <= 0) return new("Total", "The receipt total must be more than Rp 0.");
+        if (entry.Date > DateOnly.FromDateTime(DateTime.Now))
+            return new("Date", "The receipt date cannot be in the future.");
+        if (!await db.Categories.AnyAsync(category => category.Id == entry.CategoryId && category.IsActive))
+            return new("CategoryId", "Choose a category from the list.");
         return null;
     }
 

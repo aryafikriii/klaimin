@@ -54,6 +54,9 @@ public class Claim
     public bool CanBeEditedBy(string userId) =>
         ClaimantId == userId && Status is ClaimStatus.Draft or ClaimStatus.Returned;
 
+    /// <summary>Only a draft can be deleted. From its first submission a claim stays on record.</summary>
+    public bool CanBeDeletedBy(string userId) => ClaimantId == userId && Status == ClaimStatus.Draft;
+
     /// <summary>
     /// The claimant's manager decides at the manager step and anyone in finance at the finance step.
     /// Nobody decides their own claim.

@@ -92,6 +92,83 @@ public class ReceiptsController(
         var image = Unseal(form.Upload, id);
         if (claim is null || image is null) return NotFound();
 
+        var entry = ReadEntry(form);
+        if (entry is null) return await ConfirmFormAsync(form);
+
+        var problem = await claims.AddReceiptAsync(claim, User.Id(), entry, image);
+        if (problem is null) return RedirectToAction("Details", "Claims", new { id });
+
+        ModelState.AddModelError(problem.Field, problem.Message);
+        return await ConfirmFormAsync(form);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id)
+    {
+        if (await EditableReceiptAsync(id) is not var (_, receipt)) return NotFound();
+
+        return await FormAsync("Edit", new ReceiptForm
+        {
+            Total = receipt.Total.ToString("N0", Rupiah.Dots),
+            Date = receipt.Date,
+            CategoryId = receipt.CategoryId,
+            LineItems = [.. receipt.LineItems
+                .Select(item => new LineItemForm { Name = item.Name, Price = item.Price.ToString("N0", Rupiah.Dots) })],
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Edit(int id, ReceiptForm form)
+    {
+        if (await EditableReceiptAsync(id) is not var (claim, receipt)) return NotFound();
+
+        var entry = ReadEntry(form);
+        if (entry is null) return await FormAsync("Edit", form);
+
+        var problem = await claims.UpdateReceiptAsync(claim, User.Id(), receipt, entry);
+        if (problem is null) return RedirectToAction("Details", "Claims", new { id = claim.Id });
+
+        ModelState.AddModelError(problem.Field, problem.Message);
+        return await FormAsync("Edit", form);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Remove(int id)
+    {
+        if (await EditableReceiptAsync(id) is not var (claim, receipt)) return NotFound();
+
+        await claims.RemoveReceiptAsync(claim, User.Id(), receipt);
+        return RedirectToAction("Details", "Claims", new { id = claim.Id });
+    }
+
+    /// <summary>The image of an upload that is not a receipt yet, for the person who uploaded it.</summary>
+    public IActionResult Pending(int id, string upload)
+    {
+        var image = Unseal(upload, id);
+        return image is null ? NotFound() : PhysicalFile(images.PathOf(image.File), image.ContentType);
+    }
+
+    public async Task<IActionResult> Image(int id)
+    {
+        return await claims.FindReceiptAsync(id, User.AsViewer()) is var (_, receipt)
+            ? PhysicalFile(images.PathOf(receipt.ImageFile), receipt.ImageContentType)
+            : NotFound();
+    }
+
+    private async Task<Claim?> EditableClaimAsync(int id)
+    {
+        var claim = await claims.FindAsync(id, User.AsViewer());
+        return claim?.CanBeEditedBy(User.Id()) == true ? claim : null;
+    }
+
+    private async Task<(Claim Claim, Receipt Receipt)?> EditableReceiptAsync(int receiptId) =>
+        await claims.FindReceiptAsync(receiptId, User.AsViewer()) is var (claim, receipt) && claim.CanBeEditedBy(User.Id())
+            ? (claim, receipt)
+            : null;
+
+    /// <summary>The typed fields as an entry, or null after recording what is wrong with them.</summary>
+    private ReceiptEntry? ReadEntry(ReceiptForm form)
+    {
         if (!Rupiah.TryParse(form.Total, out var total))
             ModelState.AddModelError(nameof(form.Total), "Enter the total in whole Rupiah, for example 125.000.");
 
@@ -104,33 +181,7 @@ public class ReceiptsController(
                 ModelState.TryAddModelError(nameof(form.LineItems), "Give each line item a name and a price in whole Rupiah, or leave the row empty.");
         }
 
-        if (!ModelState.IsValid) return await ConfirmFormAsync(form);
-
-        var problem = await claims.AddReceiptAsync(
-            claim, User.Id(), new ReceiptEntry(total, form.Date!.Value, form.CategoryId!.Value, lineItems), image);
-        if (problem is null) return RedirectToAction("Details", "Claims", new { id });
-
-        ModelState.AddModelError(problem.Field, problem.Message);
-        return await ConfirmFormAsync(form);
-    }
-
-    /// <summary>The image of an upload that is not a receipt yet, for the person who uploaded it.</summary>
-    public IActionResult Pending(int id, string upload)
-    {
-        var image = Unseal(upload, id);
-        return image is null ? NotFound() : PhysicalFile(images.PathOf(image.File), image.ContentType);
-    }
-
-    public async Task<IActionResult> Image(int id)
-    {
-        var receipt = await claims.FindReceiptAsync(id, User.AsViewer());
-        return receipt is null ? NotFound() : PhysicalFile(images.PathOf(receipt.ImageFile), receipt.ImageContentType);
-    }
-
-    private async Task<Claim?> EditableClaimAsync(int id)
-    {
-        var claim = await claims.FindAsync(id, User.AsViewer());
-        return claim?.CanBeEditedBy(User.Id()) == true ? claim : null;
+        return ModelState.IsValid ? new ReceiptEntry(total, form.Date!.Value, form.CategoryId!.Value, lineItems) : null;
     }
 
     private StoredImage? Unseal(string? upload, int claimId)
@@ -148,11 +199,13 @@ public class ReceiptsController(
         }
     }
 
-    private async Task<IActionResult> ConfirmFormAsync(ReceiptForm form)
+    private Task<IActionResult> ConfirmFormAsync(ReceiptForm form) => FormAsync("Confirm", form);
+
+    private async Task<IActionResult> FormAsync(string view, ReceiptForm form)
     {
         while (form.LineItems.Count < BlankRows || !string.IsNullOrWhiteSpace(form.LineItems[^1].Name + form.LineItems[^1].Price))
             form.LineItems.Add(new LineItemForm());
         ViewData["Categories"] = await claims.ActiveCategoriesAsync();
-        return View("Confirm", form);
+        return View(view, form);
     }
 }

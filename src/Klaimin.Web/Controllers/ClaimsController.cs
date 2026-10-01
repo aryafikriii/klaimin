@@ -70,6 +70,16 @@ public class ClaimsController(ClaimService claims) : Controller
         return View(nameof(Details), Page(claim, comment));
     }
 
+    [HttpPost]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var claim = await claims.FindAsync(id, User.AsViewer());
+        if (claim is null || !claim.CanBeDeletedBy(User.Id())) return NotFound();
+
+        await claims.DeleteAsync(claim, User.Id());
+        return RedirectToAction(nameof(Index));
+    }
+
     private ClaimPage Page(Claim claim, string? comment = null) =>
         new(claim, claim.CanBeEditedBy(User.Id()), claim.CanBeDecidedBy(User.AsViewer()), comment);
 }

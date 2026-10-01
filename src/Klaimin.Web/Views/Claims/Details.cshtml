@@ -71,6 +71,17 @@
                     </tbody>
                 </table>
             }
+            @if (Model.Editable)
+            {
+                <div class="receipt-actions">
+                    <a class="button quiet" asp-controller="Receipts" asp-action="Edit" asp-route-id="@receipt.Id"
+                       aria-label="Edit the receipt dated @date">Edit</a>
+                    <form asp-controller="Receipts" asp-action="Remove" asp-route-id="@receipt.Id" method="post"
+                          onsubmit="return confirm('Remove this receipt and its photo from the claim?')">
+                        <button class="quiet" type="submit" aria-label="Remove the receipt dated @date">Remove receipt</button>
+                    </form>
+                </div>
+            }
         </div>
     </article>
 }
@@ -117,6 +128,13 @@
         {
             <form asp-action="Submit" asp-route-id="@claim.Id" method="post">
                 <button type="submit">@(claim.Status == ClaimStatus.Returned ? "Resubmit claim" : "Submit claim")</button>
+            </form>
+        }
+        @if (claim.CanBeDeletedBy(User.Id()))
+        {
+            <form class="aside" asp-action="Delete" asp-route-id="@claim.Id" method="post"
+                  onsubmit="return confirm('Delete this draft claim with all its receipts? This cannot be undone.')">
+                <button class="quiet" type="submit">Delete claim</button>
             </form>
         }
     </div>

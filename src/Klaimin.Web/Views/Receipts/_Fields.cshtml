@@ -1,0 +1,41 @@
+@model ReceiptForm
+@{
+    var categories = (List<Category>)ViewData["Categories"]!;
+    var today = DateTime.Now.ToString("yyyy-MM-dd");
+}
+<div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
+
+<label asp-for="Total"></label>
+<p class="hint" id="total-hint">Whole Rupiah, as printed on the receipt.</p>
+<input asp-for="Total" inputmode="numeric" required aria-describedby="total-hint" />
+<span asp-validation-for="Total" class="error"></span>
+
+<label asp-for="Date"></label>
+<input asp-for="Date" type="date" max="@today" required />
+<span asp-validation-for="Date" class="error"></span>
+
+<label asp-for="CategoryId">Category</label>
+<select asp-for="CategoryId" required>
+    <option value="">Choose a category</option>
+    @foreach (var category in categories)
+    {
+        <option value="@category.Id">@category.Name</option>
+    }
+</select>
+<span asp-validation-for="CategoryId" class="error"></span>
+
+<fieldset>
+    <legend>Line items</legend>
+    <p class="hint">What was bought and its price. Empty rows are ignored.</p>
+    <div data-line-items>
+        @for (var i = 0; i < Model.LineItems.Count; i++)
+        {
+            <div class="line-item">
+                <input asp-for="LineItems[i].Name" aria-label="Line item @(i + 1) name" placeholder="Item" />
+                <input asp-for="LineItems[i].Price" inputmode="numeric" aria-label="Line item @(i + 1) price" placeholder="Price" />
+            </div>
+        }
+    </div>
+    <span asp-validation-for="LineItems" class="error"></span>
+    <button class="quiet" type="button" data-add-line-item hidden>Add another line item</button>
+</fieldset>

@@ -36,5 +36,7 @@ public class ReceiptImages(string root)
         return (new(file, contentType), null);
     }
 
+    public void Delete(string file) => File.Delete(Path.Combine(root, file));
+
     public string PathOf(string file) => Path.Combine(root, file);
 }

@@ -1,0 +1,14 @@
+@model ReceiptForm
+@{
+    ViewData["Title"] = "Edit receipt";
+    var receiptId = ViewContext.RouteData.Values["id"];
+}
+<h1>Edit receipt</h1>
+<div class="confirm">
+    <img src="@Url.Action("Image", new { id = receiptId })" alt="The photo of this receipt" />
+    <form asp-action="Edit" asp-route-id="@receiptId" method="post">
+        <partial name="_Fields" />
+        <button type="submit">Save changes</button>
+    </form>
+</div>
+<script src="~/js/receipt.js" asp-append-version="true"></script>

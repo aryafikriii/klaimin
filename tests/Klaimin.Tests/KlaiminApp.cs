@@ -42,6 +42,9 @@ public sealed class KlaiminApp : WebApplicationFactory<Program>
             Task.FromResult(app.Extraction);
     }
 
+    /// <summary>How many receipt images are on disk. The one thing a page cannot show.</summary>
+    public int StoredImageCount => Directory.Exists(_images) ? Directory.GetFiles(_images).Length : 0;
+
     public async Task<HttpClient> SignedInAsync(string role)
     {
         var client = CreateClient();
