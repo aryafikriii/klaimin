@@ -20,6 +20,7 @@ public class SigningInTests
     [InlineData("claimant@klaimin.test")]
     [InlineData("manager@klaimin.test")]
     [InlineData("finance@klaimin.test")]
+    [InlineData("finance2@klaimin.test")]
     [InlineData("admin@klaimin.test")]
     public async Task Seeded_account_signs_in_to_an_empty_My_claims(string email)
     {
@@ -72,7 +73,7 @@ public class SigningInTests
         var response = await client.PostFormAsync(
             "/Account/Login", "/Account/DevLogin", new() { ["email"] = "finance@klaimin.test" });
 
-        foreach (var role in new[] { "claimant", "manager", "finance", "admin" })
+        foreach (var role in new[] { "claimant", "manager", "finance", "finance2", "admin" })
             Assert.Contains($"value=\"{role}@klaimin.test\"", signIn);
         var page = await response.Content.ReadAsStringAsync();
         Assert.Contains("<h1>My claims</h1>", page);

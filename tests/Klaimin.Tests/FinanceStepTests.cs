@@ -151,6 +151,25 @@ public class FinanceStepTests
         Assert.DoesNotContain("Audit travel", await finance.GetStringAsync("/Approvals"));
     }
 
+    [Fact]
+    public async Task A_finance_users_own_claim_is_decided_by_another_finance_user()
+    {
+        using var app = new KlaiminApp();
+        var finance = await app.SignedInAsync("finance");
+        var own = await finance.StartClaimAsync("Audit travel");
+        await finance.AddReceiptAsync(own);
+        await finance.SubmitAsync(own);
+        var colleague = await app.SignedInAsync("finance2");
+
+        var listed = await colleague.GetStringAsync("/Approvals");
+        await colleague.DecideAsync(own, "Approve");
+
+        Assert.Contains("Audit travel", listed);
+        var page = await finance.GetStringAsync(own);
+        AssertStatus("Approved", page);
+        Assert.Matches("(?s)Approved by finance2@klaimin.test.*Finance step", page);
+    }
+
     [Theory]
     [InlineData("claimant")]
     [InlineData("manager")]

@@ -21,9 +21,9 @@
         <form class="dev-accounts" asp-action="DevLogin" method="post">
             <h2>Development accounts</h2>
             <p>These buttons exist only in the development environment.</p>
-            @foreach (var role in Roles.All)
+            @foreach (var (name, _) in Seed.Accounts)
             {
-                <button class="quiet" type="submit" name="email" value="@Seed.EmailFor(role)">Sign in as @role</button>
+                <button class="quiet" type="submit" name="email" value="@Seed.EmailFor(name)">Sign in as @name</button>
             }
         </form>
     }
