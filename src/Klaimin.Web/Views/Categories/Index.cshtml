@@ -1,0 +1,40 @@
+@model List<Category>
+@{
+    ViewData["Title"] = "Categories";
+}
+<div class="page-head">
+    <h1>Categories</h1>
+    <a class="button" asp-action="New">New category</a>
+</div>
+<p class="hint">A receipt above its category's cap is flagged. A changed cap applies to receipts confirmed from then on.</p>
+<table class="stack">
+    <thead>
+        <tr>
+            <th scope="col">Category</th>
+            <th scope="col" class="amount">Cap</th>
+            <th scope="col">Offered on new receipts</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var category in Model)
+        {
+            <tr>
+                <td>@category.Name</td>
+                <td class="amount" data-label="Cap">@Rupiah.Format(category.Cap)</td>
+                <td data-label="Offered on new receipts">@(category.IsActive ? "Yes" : "No, deactivated")</td>
+                <td>
+                    <div class="row-actions">
+                        <a class="button quiet" asp-action="Edit" asp-route-id="@category.Id" aria-label="Edit @category.Name">Edit</a>
+                        <form asp-action="SetActive" asp-route-id="@category.Id" method="post">
+                            <input type="hidden" name="active" value="@(category.IsActive ? "false" : "true")" />
+                            <button class="quiet" type="submit" aria-label="@(category.IsActive ? "Deactivate" : "Reactivate") @category.Name">
+                                @(category.IsActive ? "Deactivate" : "Reactivate")
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -10,7 +10,7 @@
 }
 else
 {
-    <table>
+    <table class="stack">
         <thead>
             <tr>
                 <th scope="col">Claim</th>
@@ -25,9 +25,9 @@ else
             {
                 <tr>
                     <td><a asp-controller="Claims" asp-action="Details" asp-route-id="@claim.Id">@claim.Title</a></td>
-                    <td>@claim.Claimant.Email</td>
-                    <td>@claim.SubmittedAt?.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture)</td>
-                    <td>
+                    <td data-label="Claimant">@claim.Claimant.Email</td>
+                    <td data-label="Submitted">@claim.SubmittedAt?.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture)</td>
+                    <td data-label="Waiting at">
                         @(claim.Status == ClaimStatus.AwaitingFinance ? "Finance step" : "Manager step")
                         @{
                             // Finance reads what the manager decided in this round before opening the claim.
@@ -38,7 +38,7 @@ else
                             <p class="hint">@last.KindLabel by @last.Approver.Email@(last.Comment is null ? "" : $": {last.Comment}")</p>
                         }
                     </td>
-                    <td class="amount">@Rupiah.Format(claim.Total)</td>
+                    <td class="amount" data-label="Claim total">@Rupiah.Format(claim.Total)</td>
                 </tr>
             }
         </tbody>

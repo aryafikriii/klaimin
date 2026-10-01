@@ -156,10 +156,11 @@ th, td {
 
 th { color: var(--muted); font-size: 0.875rem; font-weight: 600; }
 
-td a { display: inline-block; padding: 0.625rem 0; margin: -0.625rem 0; }
+td a:not(.button) { display: inline-block; padding: 0.625rem 0; margin: -0.625rem 0; }
+
+th:last-child, td:last-child { padding-right: 0; }
 
 .amount {
-  padding-right: 0;
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -252,6 +253,36 @@ button:disabled { opacity: 0.6; cursor: progress; }
 .flag p + p, .flag form { margin-top: 0.75rem; }
 .flag label { margin-top: 0; }
 .flag form > button { margin-top: 0.75rem; }
+
+.row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
+.row-actions button { margin-top: 0; }
+
+/* Below this width a wide table has no room for its columns, so each row becomes a short labelled list. */
+@media (max-width: 40rem) {
+  table.stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; }
+  table.stack tr { padding: 0.75rem 0; border-bottom: 1px solid var(--line); }
+  table.stack td { padding: 0.125rem 0; border: 0; text-align: left; white-space: normal; }
+  table.stack td:first-child { font-weight: 600; }
+  table.stack td[data-label]::before { content: attr(data-label) ": "; color: var(--muted); }
+  table.stack .row-actions { justify-content: flex-start; margin-top: 0.5rem; }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 .receipt-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
 

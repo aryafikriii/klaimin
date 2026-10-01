@@ -1,0 +1,20 @@
+@model CategoryForm
+@{
+    var editing = ViewContext.RouteData.Values["action"]?.ToString() == "Edit";
+    ViewData["Title"] = editing ? "Edit category" : "New category";
+}
+<div class="narrow">
+    <h1>@ViewData["Title"]</h1>
+    <form asp-action="@(editing ? "Edit" : "New")" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post">
+        <label asp-for="Name"></label>
+        <input asp-for="Name" maxlength="@PolicyService.MaxNameLength" required autofocus />
+        <span asp-validation-for="Name" class="error"></span>
+
+        <label asp-for="Cap"></label>
+        <p class="hint" id="cap-hint">The highest receipt total, in whole Rupiah, before a receipt in this category is flagged.</p>
+        <input asp-for="Cap" inputmode="numeric" required aria-describedby="cap-hint" />
+        <span asp-validation-for="Cap" class="error"></span>
+
+        <button type="submit">@(editing ? "Save changes" : "Add category")</button>
+    </form>
+</div>

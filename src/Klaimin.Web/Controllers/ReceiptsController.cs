@@ -59,7 +59,7 @@ public class ReceiptsController(
             return View(upload);
         }
 
-        var categories = await claims.ActiveCategoriesAsync();
+        var categories = await claims.OfferedCategoriesAsync();
         var bytes = await System.IO.File.ReadAllBytesAsync(images.PathOf(image.File), cancellation);
         var result = await extractor.ExtractAsync(
             bytes, image.ContentType, [.. categories.Select(category => category.Name)], cancellation);
@@ -107,7 +107,7 @@ public class ReceiptsController(
     {
         if (await EditableReceiptAsync(id) is not var (_, receipt)) return NotFound();
 
-        return await FormAsync("Edit", new ReceiptForm
+        return await FormAsync("Edit", receipt.CategoryId, new ReceiptForm
         {
             Total = receipt.Total.ToString("N0", Rupiah.Dots),
             Date = receipt.Date,
@@ -123,13 +123,13 @@ public class ReceiptsController(
         if (await EditableReceiptAsync(id) is not var (claim, receipt)) return NotFound();
 
         var entry = ReadEntry(form);
-        if (entry is null) return await FormAsync("Edit", form);
+        if (entry is null) return await FormAsync("Edit", receipt.CategoryId, form);
 
         var problem = await claims.UpdateReceiptAsync(claim, User.Id(), receipt, entry);
         if (problem is null) return RedirectToAction("Details", "Claims", new { id = claim.Id });
 
         ModelState.AddModelError(problem.Field, problem.Message);
-        return await FormAsync("Edit", form);
+        return await FormAsync("Edit", receipt.CategoryId, form);
     }
 
     [HttpPost]
@@ -211,13 +211,13 @@ public class ReceiptsController(
         }
     }
 
-    private Task<IActionResult> ConfirmFormAsync(ReceiptForm form) => FormAsync("Confirm", form);
+    private Task<IActionResult> ConfirmFormAsync(ReceiptForm form) => FormAsync("Confirm", null, form);
 
-    private async Task<IActionResult> FormAsync(string view, ReceiptForm form)
+    private async Task<IActionResult> FormAsync(string view, int? currentCategoryId, ReceiptForm form)
     {
         while (form.LineItems.Count < BlankRows || !string.IsNullOrWhiteSpace(form.LineItems[^1].Name + form.LineItems[^1].Price))
             form.LineItems.Add(new LineItemForm());
-        ViewData["Categories"] = await claims.ActiveCategoriesAsync();
+        ViewData["Categories"] = await claims.OfferedCategoriesAsync(currentCategoryId);
         return View(view, form);
     }
 }

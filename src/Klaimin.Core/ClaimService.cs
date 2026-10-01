@@ -28,8 +28,9 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
             .AsSplitQuery()
             .ToListAsync();
 
-    public Task<List<Category>> ActiveCategoriesAsync() =>
-        db.Categories.Where(category => category.IsActive).OrderBy(category => category.Id).ToListAsync();
+    /// <summary>The categories offered for a receipt: the active ones, plus the one a receipt being edited already has.</summary>
+    public Task<List<Category>> OfferedCategoriesAsync(int? current = null) =>
+        db.Categories.Where(category => category.IsActive || category.Id == current).OrderBy(category => category.Id).ToListAsync();
 
     public async Task<Claim> StartAsync(string claimantId, string title)
     {
@@ -85,7 +86,7 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
     {
         RequireEditable(claim, actorId);
 
-        if (await CheckAsync(entry) is { } problem) return problem;
+        if (await CheckAsync(entry, receipt.CategoryId) is { } problem) return problem;
 
         receipt.Confirm(entry, await CapAsync(entry.CategoryId));
         receipt.DuplicateOfId = await FindDuplicateAsync(claim, receipt);
@@ -128,12 +129,13 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
         files.ForEach(images.Delete);
     }
 
-    private async Task<Problem?> CheckAsync(ReceiptEntry entry)
+    private async Task<Problem?> CheckAsync(ReceiptEntry entry, int? currentCategoryId = null)
     {
         if (entry.Total <= 0) return new("Total", "The receipt total must be more than Rp 0.");
         if (entry.Date > DateOnly.FromDateTime(DateTime.Now))
             return new("Date", "The receipt date cannot be in the future.");
-        if (!await db.Categories.AnyAsync(category => category.Id == entry.CategoryId && category.IsActive))
+        if (!await db.Categories.AnyAsync(category =>
+                category.Id == entry.CategoryId && (category.IsActive || category.Id == currentCategoryId)))
             return new("CategoryId", "Choose a category from the list.");
         return null;
     }

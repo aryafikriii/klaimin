@@ -20,6 +20,10 @@
                 {
                     <a asp-controller="Approvals" asp-action="Index">Approvals</a>
                 }
+                @if (User.IsInRole(Roles.Admin))
+                {
+                    <a asp-controller="Categories" asp-action="Index">Categories</a>
+                }
             </nav>
         }
         <div class="session">

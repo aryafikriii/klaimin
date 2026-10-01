@@ -47,6 +47,13 @@ public class AccountController(SignInManager<AppUser> signIn, IWebHostEnvironmen
         return RedirectToAction("Index", "Claims");
     }
 
+    /// <summary>Where the cookie handler sends a signed-in user who lacks the role for a page.</summary>
+    public IActionResult AccessDenied()
+    {
+        Response.StatusCode = StatusCodes.Status403Forbidden;
+        return View();
+    }
+
     [HttpPost]
     public async Task<IActionResult> Logout()
     {
