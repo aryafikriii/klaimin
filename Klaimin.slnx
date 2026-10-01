@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Klaimin.Core/Klaimin.Core.csproj" />
+    <Project Path="src/Klaimin.Evaluation/Klaimin.Evaluation.csproj" />
+    <Project Path="src/Klaimin.Web/Klaimin.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Klaimin.Tests/Klaimin.Tests.csproj" />
+  </Folder>
+</Solution>

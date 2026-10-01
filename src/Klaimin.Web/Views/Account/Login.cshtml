@@ -1,0 +1,30 @@
+@model LoginForm
+@inject IWebHostEnvironment Environment
+@{
+    ViewData["Title"] = "Sign in";
+}
+<div class="narrow">
+    <h1>Sign in</h1>
+    <form asp-action="Login" method="post">
+        <div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
+        <label asp-for="Email"></label>
+        <input asp-for="Email" autocomplete="username" autofocus />
+        <span asp-validation-for="Email" class="error"></span>
+        <label asp-for="Password"></label>
+        <input asp-for="Password" autocomplete="current-password" />
+        <span asp-validation-for="Password" class="error"></span>
+        <button type="submit">Sign in</button>
+    </form>
+
+    @if (Environment.IsDevelopment())
+    {
+        <form class="dev-accounts" asp-action="DevLogin" method="post">
+            <h2>Development accounts</h2>
+            <p>These buttons exist only in the development environment.</p>
+            @foreach (var role in Roles.All)
+            {
+                <button class="quiet" type="submit" name="email" value="@Seed.EmailFor(role)">Sign in as @role</button>
+            }
+        </form>
+    }
+</div>
