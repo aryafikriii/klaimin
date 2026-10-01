@@ -16,6 +16,7 @@ else
                 <th scope="col">Claim</th>
                 <th scope="col">Claimant</th>
                 <th scope="col">Submitted</th>
+                <th scope="col">Waiting at</th>
                 <th scope="col" class="amount">Claim total</th>
             </tr>
         </thead>
@@ -26,6 +27,17 @@ else
                     <td><a asp-controller="Claims" asp-action="Details" asp-route-id="@claim.Id">@claim.Title</a></td>
                     <td>@claim.Claimant.Email</td>
                     <td>@claim.SubmittedAt?.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture)</td>
+                    <td>
+                        @(claim.Status == ClaimStatus.AwaitingFinance ? "Finance step" : "Manager step")
+                        @{
+                            // Finance reads what the manager decided in this round before opening the claim.
+                            var last = claim.Decisions.OrderBy(decision => decision.Id).LastOrDefault();
+                        }
+                        @if (claim.Status == ClaimStatus.AwaitingFinance && last is { Step: ApprovalStep.Manager })
+                        {
+                            <p class="hint">@last.KindLabel by @last.Approver.Email@(last.Comment is null ? "" : $": {last.Comment}")</p>
+                        }
+                    </td>
                     <td class="amount">@Rupiah.Format(claim.Total)</td>
                 </tr>
             }

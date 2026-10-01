@@ -16,7 +16,7 @@
         {
             <nav aria-label="Main">
                 <a asp-controller="Claims" asp-action="Index">My claims</a>
-                @if (User.IsInRole(Roles.Manager))
+                @if (User.IsInRole(Roles.Manager) || User.IsInRole(Roles.Finance))
                 {
                     <a asp-controller="Approvals" asp-action="Index">Approvals</a>
                 }

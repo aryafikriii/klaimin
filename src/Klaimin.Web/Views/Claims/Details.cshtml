@@ -83,7 +83,7 @@
         {
             <li>
                 <p><strong>@decision.KindLabel by @decision.Approver.Email</strong></p>
-                <p class="hint">Manager step, @decision.At.ToLocalTime().ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)</p>
+                <p class="hint">@decision.StepLabel, @decision.At.ToLocalTime().ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)</p>
                 @if (decision.Comment is not null)
                 {
                     <p>@decision.Comment</p>

@@ -18,10 +18,14 @@ public class ClaimService(KlaiminDb db)
             .ToListAsync();
 
     /// <summary>Claims waiting for this person's decision, oldest first.</summary>
-    public Task<List<Claim>> AwaitingAsync(string approverId) =>
+    public Task<List<Claim>> AwaitingAsync(Viewer approver) =>
         db.Claims.Include(claim => claim.Receipts).Include(claim => claim.Claimant)
-            .Where(claim => claim.Status == ClaimStatus.AwaitingManager && claim.Claimant.ManagerId == approverId)
+            .Include(claim => claim.Decisions).ThenInclude(decision => decision.Approver)
+            .Where(claim => claim.ClaimantId != approver.UserId
+                && (claim.Status == ClaimStatus.AwaitingManager && claim.Claimant.ManagerId == approver.UserId
+                    || claim.Status == ClaimStatus.AwaitingFinance && approver.IsFinance))
             .OrderBy(claim => claim.SubmittedAt)
+            .AsSplitQuery()
             .ToListAsync();
 
     public Task<List<Category>> ActiveCategoriesAsync() =>
@@ -90,32 +94,37 @@ public class ClaimService(KlaiminDb db)
 
         if (claim.Receipts.Count == 0) return new("", "Add at least one receipt before submitting.");
 
-        claim.Status = ClaimStatus.AwaitingManager;
+        claim.FinanceThreshold = await FinanceThresholdAsync();
+        // With no manager there is nobody for the manager step, so the claim starts at finance whatever its total.
+        claim.Status = claim.Claimant.ManagerId is null ? ClaimStatus.AwaitingFinance : ClaimStatus.AwaitingManager;
         claim.SubmittedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return null;
     }
 
-    public async Task<Problem?> DecideAsync(Claim claim, string approverId, DecisionKind kind, string? comment)
+    public async Task<Problem?> DecideAsync(Claim claim, Viewer approver, DecisionKind kind, string? comment)
     {
-        if (!claim.CanBeDecidedBy(approverId))
+        if (!claim.CanBeDecidedBy(approver))
             throw new InvalidOperationException($"Claim {claim.Id} cannot be decided by this person in status {claim.Status}.");
 
         comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
         if (kind != DecisionKind.Approve && comment is null)
             return new("comment", "Write a comment so the claimant knows why.");
 
+        var step = claim.Status == ClaimStatus.AwaitingFinance ? ApprovalStep.Finance : ApprovalStep.Manager;
+        var needsFinance = step == ApprovalStep.Manager
+            && claim.Total > (claim.FinanceThreshold ?? await FinanceThresholdAsync());
         claim.Decisions.Add(new Decision
         {
-            ApproverId = approverId,
-            Step = ApprovalStep.Manager,
+            ApproverId = approver.UserId,
+            Step = step,
             Kind = kind,
             Comment = comment,
             At = DateTime.UtcNow,
         });
         claim.Status = kind switch
         {
-            DecisionKind.Approve => ClaimStatus.Approved,
+            DecisionKind.Approve => needsFinance ? ClaimStatus.AwaitingFinance : ClaimStatus.Approved,
             DecisionKind.Return => ClaimStatus.Returned,
             DecisionKind.Reject => ClaimStatus.Rejected,
             _ => throw new ArgumentOutOfRangeException(nameof(kind)),
@@ -123,6 +132,8 @@ public class ClaimService(KlaiminDb db)
         await db.SaveChangesAsync();
         return null;
     }
+
+    private Task<long> FinanceThresholdAsync() => db.Settings.Select(settings => settings.FinanceThreshold).SingleAsync();
 
     private static void RequireEditable(Claim claim, string actorId)
     {

@@ -149,7 +149,7 @@ public class ManagerStepTests
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var page = await manager.GetStringAsync(own);
-        Assert.Matches("(?s)<dt>Status</dt>\\s*<dd>Awaiting manager</dd>", page);
+        Assert.Matches("(?s)<dt>Status</dt>\\s*<dd>Awaiting finance</dd>", page);
         Assert.DoesNotContain("name=\"kind\"", page);
     }
 

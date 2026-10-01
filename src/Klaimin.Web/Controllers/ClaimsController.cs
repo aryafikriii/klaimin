@@ -61,9 +61,9 @@ public class ClaimsController(ClaimService claims) : Controller
     public async Task<IActionResult> Decide(int id, DecisionKind kind, string? comment)
     {
         var claim = await claims.FindAsync(id, User.AsViewer());
-        if (claim is null || !claim.CanBeDecidedBy(User.Id()) || !Enum.IsDefined(kind)) return NotFound();
+        if (claim is null || !claim.CanBeDecidedBy(User.AsViewer()) || !Enum.IsDefined(kind)) return NotFound();
 
-        var problem = await claims.DecideAsync(claim, User.Id(), kind, comment);
+        var problem = await claims.DecideAsync(claim, User.AsViewer(), kind, comment);
         if (problem is null) return RedirectToAction("Index", "Approvals");
 
         ModelState.AddModelError(problem.Field, problem.Message);
@@ -71,5 +71,5 @@ public class ClaimsController(ClaimService claims) : Controller
     }
 
     private ClaimPage Page(Claim claim, string? comment = null) =>
-        new(claim, claim.CanBeEditedBy(User.Id()), claim.CanBeDecidedBy(User.Id()), comment);
+        new(claim, claim.CanBeEditedBy(User.Id()), claim.CanBeDecidedBy(User.AsViewer()), comment);
 }

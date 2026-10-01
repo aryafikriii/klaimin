@@ -4,6 +4,7 @@ public enum ClaimStatus
 {
     Draft,
     AwaitingManager,
+    AwaitingFinance,
     Approved,
     Returned,
     Rejected,
@@ -12,6 +13,7 @@ public enum ClaimStatus
 public enum ApprovalStep
 {
     Manager,
+    Finance,
 }
 
 public enum DecisionKind
@@ -29,6 +31,9 @@ public class Claim
     public string Title { get; set; } = "";
     public ClaimStatus Status { get; set; }
     public DateTime? SubmittedAt { get; set; }
+
+    /// <summary>The finance threshold in force when the claim was last submitted. A later change does not reroute it.</summary>
+    public long? FinanceThreshold { get; set; }
     public List<Receipt> Receipts { get; set; } = [];
     public List<Decision> Decisions { get; set; } = [];
 
@@ -38,6 +43,7 @@ public class Claim
     {
         ClaimStatus.Draft => "Draft",
         ClaimStatus.AwaitingManager => "Awaiting manager",
+        ClaimStatus.AwaitingFinance => "Awaiting finance",
         ClaimStatus.Approved => "Approved",
         ClaimStatus.Returned => "Returned",
         ClaimStatus.Rejected => "Rejected",
@@ -48,9 +54,17 @@ public class Claim
     public bool CanBeEditedBy(string userId) =>
         ClaimantId == userId && Status is ClaimStatus.Draft or ClaimStatus.Returned;
 
-    /// <summary>Only the claimant's manager decides at the manager step, and nobody decides their own claim.</summary>
-    public bool CanBeDecidedBy(string userId) =>
-        Status == ClaimStatus.AwaitingManager && ClaimantId != userId && Claimant.ManagerId == userId;
+    /// <summary>
+    /// The claimant's manager decides at the manager step and anyone in finance at the finance step.
+    /// Nobody decides their own claim.
+    /// </summary>
+    public bool CanBeDecidedBy(Viewer viewer) =>
+        ClaimantId != viewer.UserId && Status switch
+        {
+            ClaimStatus.AwaitingManager => Claimant.ManagerId == viewer.UserId,
+            ClaimStatus.AwaitingFinance => viewer.IsFinance,
+            _ => false,
+        };
 
     /// <summary>A draft is the claimant's alone. Once submitted, their manager, finance, and admins can see it too.</summary>
     public bool CanBeSeenBy(Viewer viewer) =>
@@ -67,6 +81,13 @@ public class Decision
     public DecisionKind Kind { get; set; }
     public string? Comment { get; set; }
     public DateTime At { get; set; }
+
+    public string StepLabel => Step switch
+    {
+        ApprovalStep.Manager => "Manager step",
+        ApprovalStep.Finance => "Finance step",
+        _ => throw new InvalidOperationException($"No label for step {Step}."),
+    };
 
     public string KindLabel => Kind switch
     {
@@ -103,6 +124,15 @@ public class Category
     public string Name { get; set; } = "";
     public long Cap { get; set; }
     public bool IsActive { get; set; } = true;
+}
+
+/// <summary>Company-wide policy values an admin can change. There is exactly one row.</summary>
+public class Settings
+{
+    public const long SeededFinanceThreshold = 1_000_000;
+
+    public int Id { get; set; }
+    public long FinanceThreshold { get; set; }
 }
 
 /// <summary>The person looking at a claim, reduced to what the visibility rule needs.</summary>
