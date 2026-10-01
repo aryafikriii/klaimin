@@ -35,6 +35,19 @@ public class ThemeTests
     }
 
     [Fact]
+    public async Task Pages_link_an_icon_that_is_served_without_signing_in()
+    {
+        using var app = new KlaiminApp();
+        var client = app.CreateClient();
+
+        var page = await client.GetStringAsync("/Account/Login");
+        var icon = await client.GetAsync("/favicon.svg");
+
+        Assert.Contains("<link rel=\"icon\" href=\"/favicon.svg\"", page);
+        Assert.Equal("image/svg+xml", icon.Content.Headers.ContentType!.MediaType);
+    }
+
+    [Fact]
     public async Task Switching_theme_never_leaves_the_site()
     {
         using var app = new KlaiminApp();
