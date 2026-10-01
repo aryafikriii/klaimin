@@ -8,15 +8,22 @@ public static class Seed
     public static string EmailFor(string role) => $"{role}@klaimin.test";
 
     /// <summary>
-    /// Creates the database and one account per role. With no password the accounts cannot sign in
-    /// with one, which leaves the development sign-in buttons as the only way in.
+    /// Brings the database up to date and, when it is empty, adds the categories and one account per role.
+    /// With no password the accounts cannot sign in with one, which leaves the development sign-in buttons as the only way in.
     /// </summary>
     public static async Task RunAsync(
         KlaiminDb db, UserManager<AppUser> users, RoleManager<IdentityRole> roles, string? password)
     {
-        // ponytail: EnsureCreated cannot change an existing schema. Move to migrations once a database is worth keeping.
-        await db.Database.EnsureCreatedAsync();
+        await db.Database.MigrateAsync();
         if (await users.Users.AnyAsync()) return;
+
+        db.Categories.AddRange(
+            new Category { Name = "Meals", Cap = 150_000 },
+            new Category { Name = "Transport", Cap = 300_000 },
+            new Category { Name = "Lodging", Cap = 1_000_000 },
+            new Category { Name = "Office supplies", Cap = 500_000 },
+            new Category { Name = "Other", Cap = 250_000 });
+        await db.SaveChangesAsync();
 
         foreach (var role in Roles.All)
         {

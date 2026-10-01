@@ -1,0 +1,14 @@
+@model NewClaimForm
+@{
+    ViewData["Title"] = "New claim";
+}
+<div class="narrow">
+    <h1>New claim</h1>
+    <form asp-action="New" method="post">
+        <label asp-for="Title"></label>
+        <p class="hint" id="title-hint">What the spending was for, such as a trip or a purchase.</p>
+        <input asp-for="Title" maxlength="100" required autofocus aria-describedby="title-hint" />
+        <span asp-validation-for="Title" class="error"></span>
+        <button type="submit">Start claim</button>
+    </form>
+</div>

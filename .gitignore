@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 *.db
 *.db-shm
 *.db-wal
+
+# Receipt images uploaded at run time
+App_Data/

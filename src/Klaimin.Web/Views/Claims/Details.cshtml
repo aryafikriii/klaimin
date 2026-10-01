@@ -1,0 +1,82 @@
+@using System.Globalization
+@model ClaimPage
+@{
+    var claim = Model.Claim;
+    ViewData["Title"] = claim.Title;
+}
+<h1>@claim.Title</h1>
+<dl class="summary">
+    <div>
+        <dt>Status</dt>
+        <dd>@claim.StatusLabel</dd>
+    </div>
+    <div>
+        <dt>Claim total</dt>
+        <dd class="amount">@Rupiah.Format(claim.Total)</dd>
+    </div>
+</dl>
+<div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
+
+<h2>Receipts</h2>
+@if (claim.Receipts.Count == 0)
+{
+    <p class="empty">No receipts yet. A claim needs at least one before it can be submitted.</p>
+}
+@foreach (var receipt in claim.Receipts)
+{
+    var date = receipt.Date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
+    <article class="receipt">
+        <a href="@Url.Action("Image", "Receipts", new { id = receipt.Id })">
+            <img src="@Url.Action("Image", "Receipts", new { id = receipt.Id })" alt="Photo of the receipt dated @date" loading="lazy" />
+        </a>
+        <div>
+            <dl class="summary">
+                <div>
+                    <dt>Date</dt>
+                    <dd>@date</dd>
+                </div>
+                <div>
+                    <dt>Category</dt>
+                    <dd>@receipt.Category.Name</dd>
+                </div>
+                <div>
+                    <dt>Total</dt>
+                    <dd class="amount">@Rupiah.Format(receipt.Total)</dd>
+                </div>
+            </dl>
+            @if (receipt.LineItems.Count > 0)
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col">Line item</th>
+                            <th scope="col" class="amount">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in receipt.LineItems)
+                        {
+                            <tr>
+                                <td>@item.Name</td>
+                                <td class="amount">@Rupiah.Format(item.Price)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </article>
+}
+
+@if (Model.Editable)
+{
+    <div class="actions">
+        <a class="button quiet" asp-controller="Receipts" asp-action="New" asp-route-id="@claim.Id">Add receipt</a>
+        @if (claim.Receipts.Count > 0)
+        {
+            <form asp-action="Submit" asp-route-id="@claim.Id" method="post">
+                <button type="submit">Submit claim</button>
+            </form>
+        }
+    </div>
+}

@@ -9,6 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<KlaiminDb>((services, options) =>
     options.UseSqlite(services.GetRequiredService<IConfiguration>().GetConnectionString("Klaimin")));
 builder.Services.AddIdentity<AppUser, IdentityRole>().AddEntityFrameworkStores<KlaiminDb>();
+builder.Services.AddSingleton(services => new ReceiptImages(Path.Combine(
+    services.GetRequiredService<IWebHostEnvironment>().ContentRootPath,
+    services.GetRequiredService<IConfiguration>()["Storage:ReceiptImages"] ?? "App_Data/receipts")));
+builder.Services.AddScoped<ClaimService>();
 
 // Every page needs a signed-in user unless it opts out. A filter rather than a fallback policy,
 // so the stylesheet stays reachable from the sign-in page.
