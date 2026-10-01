@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Klaimin.Core;
 
-/// <summary>The policy values an admin manages: the categories and their caps.</summary>
+/// <summary>The policy values an admin manages: the categories with their caps, and the finance threshold.</summary>
 public class PolicyService(KlaiminDb db)
 {
     public const int MaxNameLength = 50;
@@ -35,6 +35,18 @@ public class PolicyService(KlaiminDb db)
     {
         category.IsActive = active;
         await db.SaveChangesAsync();
+    }
+
+    public Task<long> FinanceThresholdAsync() => db.Settings.Select(settings => settings.FinanceThreshold).SingleAsync();
+
+    /// <summary>Applies to claims submitted from now on. A submitted claim carries the threshold it was submitted under.</summary>
+    public async Task<Problem?> SetFinanceThresholdAsync(long threshold)
+    {
+        if (threshold <= 0) return new("FinanceThreshold", "The threshold must be more than Rp 0.");
+
+        (await db.Settings.SingleAsync()).FinanceThreshold = threshold;
+        await db.SaveChangesAsync();
+        return null;
     }
 
     private async Task<Problem?> SetAsync(Category category, string? name, long cap)
