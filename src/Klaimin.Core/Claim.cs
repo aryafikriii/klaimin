@@ -107,7 +107,11 @@ public class Receipt
 {
     public int Id { get; set; }
     public int ClaimId { get; set; }
+    public Claim Claim { get; set; } = null!;
     public string ImageFile { get; set; } = "";
+
+    /// <summary>SHA-256 of the image content. Null on receipts saved before duplicates were checked.</summary>
+    public string? ImageHash { get; set; }
     public string ImageContentType { get; set; } = "";
     public long Total { get; set; }
     public DateOnly Date { get; set; }
@@ -122,6 +126,12 @@ public class Receipt
     public long? ExceededCap { get; set; }
 
     public string? Justification { get; set; }
+
+    /// <summary>The duplicate flag: the earlier receipt this one looks like.</summary>
+    public int? DuplicateOfId { get; set; }
+    public Receipt? DuplicateOf { get; set; }
+
+    public bool HasSamePhotoAs(Receipt other) => ImageHash is not null && ImageHash == other.ImageHash;
 
     public bool NeedsJustification => ExceededCap is not null && string.IsNullOrWhiteSpace(Justification);
 

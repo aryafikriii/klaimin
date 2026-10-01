@@ -19,6 +19,9 @@ public class KlaiminDb(DbContextOptions<KlaiminDb> options) : IdentityDbContext<
         builder.Entity<Settings>().HasData(new Settings { Id = 1, FinanceThreshold = Klaimin.Core.Settings.SeededFinanceThreshold });
         // Line items belong to their receipt: replacing or removing them deletes the old rows.
         builder.Entity<Receipt>().HasMany(receipt => receipt.LineItems).WithOne().IsRequired().OnDelete(DeleteBehavior.Cascade);
+        // Removing the earlier receipt leaves nothing to point at, so the flag goes with it.
+        builder.Entity<Receipt>().HasOne(receipt => receipt.DuplicateOf).WithMany().OnDelete(DeleteBehavior.SetNull);
+        builder.Entity<Receipt>().HasIndex(receipt => receipt.ImageHash);
         builder.Entity<Category>().HasIndex(category => category.Name).IsUnique();
     }
 }

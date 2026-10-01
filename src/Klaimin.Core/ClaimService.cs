@@ -46,6 +46,7 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
             .Include(claim => claim.Claimant)
             .Include(claim => claim.Receipts).ThenInclude(receipt => receipt.Category)
             .Include(claim => claim.Receipts).ThenInclude(receipt => receipt.LineItems)
+            .Include(claim => claim.Receipts).ThenInclude(receipt => receipt.DuplicateOf!.Claim.Claimant)
             .Include(claim => claim.Decisions).ThenInclude(decision => decision.Approver)
             .AsSplitQuery()
             .FirstOrDefaultAsync(claim => claim.Id == id);
@@ -72,8 +73,9 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
         if (await db.Receipts.AnyAsync(receipt => receipt.ImageFile == image.File))
             return new("", "This photo is already saved as a receipt. Upload the next receipt instead.");
 
-        var receipt = new Receipt { ImageFile = image.File, ImageContentType = image.ContentType };
+        var receipt = new Receipt { ImageFile = image.File, ImageContentType = image.ContentType, ImageHash = image.Hash };
         receipt.Confirm(entry, await CapAsync(entry.CategoryId));
+        receipt.DuplicateOfId = await FindDuplicateAsync(claim, receipt);
         claim.Receipts.Add(receipt);
         await db.SaveChangesAsync();
         return null;
@@ -86,6 +88,7 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
         if (await CheckAsync(entry) is { } problem) return problem;
 
         receipt.Confirm(entry, await CapAsync(entry.CategoryId));
+        receipt.DuplicateOfId = await FindDuplicateAsync(claim, receipt);
         await db.SaveChangesAsync();
         return null;
     }
@@ -182,6 +185,22 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
         await db.SaveChangesAsync();
         return null;
     }
+
+    /// <summary>
+    /// The earliest other receipt this one looks like: the same photo on a claim that has been submitted (or on
+    /// any claim of the same claimant), or the same total and date on another receipt of the same claimant.
+    /// Another person's draft never counts, so a flag cannot reveal what someone has not submitted yet.
+    /// </summary>
+    private Task<int?> FindDuplicateAsync(Claim claim, Receipt receipt) =>
+        db.Receipts
+            .Where(other => other.Id != receipt.Id)
+            .Where(other =>
+                receipt.ImageHash != null && other.ImageHash == receipt.ImageHash
+                    && (other.Claim.Status != ClaimStatus.Draft || other.Claim.ClaimantId == claim.ClaimantId)
+                || other.Total == receipt.Total && other.Date == receipt.Date && other.Claim.ClaimantId == claim.ClaimantId)
+            .OrderBy(other => other.Id)
+            .Select(other => (int?)other.Id)
+            .FirstOrDefaultAsync();
 
     private Task<long> CapAsync(int categoryId) =>
         db.Categories.Where(category => category.Id == categoryId).Select(category => category.Cap).SingleAsync();

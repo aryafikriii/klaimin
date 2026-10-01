@@ -89,9 +89,14 @@ public static partial class HttpClientExtensions
 
     public static string UploadForm(string claim) => claim.Replace("/Claims/Details/", "/Receipts/New/");
 
+    private static int _photos;
+
+    /// <summary>A PNG no other call has produced, so receipts only share a photo when a test makes them.</summary>
+    public static byte[] NewPhoto() => [.. Png, .. BitConverter.GetBytes(Interlocked.Increment(ref _photos))];
+
     public static Task<HttpResponseMessage> UploadAsync(
         this HttpClient client, string claim, byte[]? image = null, string fileName = "receipt.png") =>
-        client.PostFormAsync(UploadForm(claim), UploadForm(claim), file: ("Image", fileName, image ?? Png));
+        client.PostFormAsync(UploadForm(claim), UploadForm(claim), file: ("Image", fileName, image ?? NewPhoto()));
 
     /// <summary>Confirms the upload shown on a confirmation page with the given fields.</summary>
     public static Task<HttpResponseMessage> ConfirmAsync(
@@ -103,13 +108,14 @@ public static partial class HttpClientExtensions
 
     /// <summary>Uploads a receipt image and confirms it with fields typed by hand.</summary>
     public static async Task<HttpResponseMessage> AddReceiptAsync(
-        this HttpClient client, string claim, string total = "125.000", string category = "Meals")
+        this HttpClient client, string claim, string total = "125.000", string category = "Meals",
+        byte[]? image = null, string date = "2026-09-14")
     {
-        var page = await (await client.UploadAsync(claim)).Content.ReadAsStringAsync();
+        var page = await (await client.UploadAsync(claim, image)).Content.ReadAsStringAsync();
         return await client.ConfirmAsync(claim, page, new()
         {
             ["Total"] = total,
-            ["Date"] = "2026-09-14",
+            ["Date"] = date,
             ["CategoryId"] = CategoryId(page, category),
         });
     }

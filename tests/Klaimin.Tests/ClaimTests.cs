@@ -21,7 +21,7 @@ public class ClaimTests
         HttpClient client, string claim, byte[]? image = null, string fileName = "receipt.png",
         string total = "125.000", string category = "Meals")
     {
-        var uploaded = await client.UploadAsync(claim, image, fileName);
+        var uploaded = await client.UploadAsync(claim, image ?? Png, fileName);
         var page = await uploaded.Content.ReadAsStringAsync();
         if (!page.Contains("name=\"Upload\"")) return uploaded;
 

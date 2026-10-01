@@ -32,7 +32,7 @@
 @foreach (var receipt in claim.Receipts)
 {
     var date = receipt.DateLabel;
-    <article class="receipt">
+    <article class="receipt" id="receipt-@receipt.Id">
         <a href="@Url.Action("Image", "Receipts", new { id = receipt.Id })">
             <img src="@Url.Action("Image", "Receipts", new { id = receipt.Id })" alt="Photo of the receipt dated @date" loading="lazy" />
         </a>
@@ -68,6 +68,25 @@
                     else
                     {
                         <p><span class="hint">Justification</span><br />@receipt.Justification</p>
+                    }
+                </div>
+            }
+            @if (receipt.DuplicateOf is { } other)
+            {
+                <div class="flag">
+                    <p>
+                        <strong>Duplicate flag.</strong>
+                        @(receipt.HasSamePhotoAs(other)
+                            ? "The photo is identical to the photo on another receipt."
+                            : "The total and date match another receipt from the same claimant.")
+                    </p>
+                    @if (other.Claim.CanBeSeenBy(User.AsViewer()))
+                    {
+                        <p><a asp-action="Details" asp-route-id="@other.ClaimId" asp-fragment="receipt-@other.Id">Open the other receipt</a></p>
+                    }
+                    else
+                    {
+                        <p class="hint">The other receipt is on a claim you cannot open.</p>
                     }
                 </div>
             }

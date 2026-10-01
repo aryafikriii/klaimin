@@ -21,7 +21,7 @@ public class ExtractionTests
         var client = await app.SignedInAsync("claimant");
         var claim = await client.StartClaimAsync();
 
-        var page = await (await client.UploadAsync(claim)).Content.ReadAsStringAsync();
+        var page = await (await client.UploadAsync(claim, HttpClientExtensions.Png)).Content.ReadAsStringAsync();
 
         Assert.Contains("These fields were read from the photo.", page);
         Assert.Matches("<input[^>]*name=\"Total\"[^>]*value=\"53.000\"", page);
@@ -189,6 +189,6 @@ public class ExtractionTests
         Assert.Equal(HttpStatusCode.NotFound, stolen.StatusCode);
         Assert.Equal(claim, first.RequestMessage!.RequestUri!.AbsolutePath);
         Assert.Contains("This photo is already saved as a receipt.", await second.Content.ReadAsStringAsync());
-        Assert.Single(Regex.Matches(await claimant.GetStringAsync(claim), "<article class=\"receipt\">"));
+        Assert.Single(Regex.Matches(await claimant.GetStringAsync(claim), "<article class=\"receipt\""));
     }
 }

@@ -33,7 +33,7 @@ public class DraftTests
         await client.AddReceiptAsync(claim, "20.000", "Transport");
 
         var page = await client.GetStringAsync(claim);
-        Assert.Equal(2, Regex.Count(page, "<article class=\"receipt\">"));
+        Assert.Equal(2, Regex.Count(page, "<article class=\"receipt\""));
         Assert.Matches("(?s)<dt>Claim total</dt>\\s*<dd class=\"amount\">Rp 145.000</dd>", page);
     }
 
@@ -114,7 +114,7 @@ public class DraftTests
 
         var page = await response.Content.ReadAsStringAsync();
         Assert.Equal(claim, response.RequestMessage!.RequestUri!.AbsolutePath);
-        Assert.Single(Regex.Matches(page, "<article class=\"receipt\">"));
+        Assert.Single(Regex.Matches(page, "<article class=\"receipt\""));
         Assert.Matches("(?s)<dt>Claim total</dt>\\s*<dd class=\"amount\">Rp 125.000</dd>", page);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/Receipts/Image/1")).StatusCode);
         Assert.Equal(1, app.StoredImageCount);

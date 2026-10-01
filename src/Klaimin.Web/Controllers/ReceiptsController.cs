@@ -73,7 +73,7 @@ public class ReceiptsController(
         };
         var form = new ReceiptForm
         {
-            Upload = _uploads.Protect($"{User.Id()}|{id}|{image.File}|{image.ContentType}"),
+            Upload = _uploads.Protect($"{User.Id()}|{id}|{image.File}|{image.ContentType}|{image.Hash}"),
             Total = extraction?.Total?.ToString("N0", Rupiah.Dots),
             Date = extraction?.Date,
             // The model's answer only counts when it names a category that exists and is active.
@@ -200,9 +200,9 @@ public class ReceiptsController(
     {
         try
         {
-            return _uploads.Unprotect(upload ?? "").Split('|') is [var user, var claim, var file, var contentType]
+            return _uploads.Unprotect(upload ?? "").Split('|') is [var user, var claim, var file, var contentType, var hash]
                 && user == User.Id() && claim == claimId.ToString()
-                    ? new StoredImage(file, contentType)
+                    ? new StoredImage(file, contentType, hash)
                     : null;
         }
         catch (Exception error) when (error is CryptographicException or FormatException)

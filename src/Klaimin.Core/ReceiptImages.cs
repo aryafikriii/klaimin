@@ -1,7 +1,9 @@
+using System.Security.Cryptography;
+
 namespace Klaimin.Core;
 
-/// <summary>An accepted image on disk: its file name in the store and the type its content says it is.</summary>
-public record StoredImage(string File, string ContentType);
+/// <summary>An accepted image on disk: its file name in the store, the type its content says it is, and the hash of its content.</summary>
+public record StoredImage(string File, string ContentType, string Hash);
 
 /// <summary>Receipt images on local disk, in a folder the web server does not serve.</summary>
 public class ReceiptImages(string root)
@@ -33,7 +35,7 @@ public class ReceiptImages(string root)
         Directory.CreateDirectory(root);
         var file = Guid.NewGuid().ToString("N");
         await File.WriteAllBytesAsync(Path.Combine(root, file), bytes);
-        return (new(file, contentType), null);
+        return (new(file, contentType, Convert.ToHexString(SHA256.HashData(bytes))), null);
     }
 
     public void Delete(string file) => File.Delete(Path.Combine(root, file));
