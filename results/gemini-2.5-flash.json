@@ -1,0 +1,148 @@
+{
+  "model": "gemini-2.5-flash",
+  "dataset": "CORD v1 test",
+  "datasetSource": "https://huggingface.co/datasets/naver-clova-ix/cord-v1",
+  "license": "CC BY 4.0",
+  "attribution": "Seunghyun Park et al., CORD: A Consolidated Receipt Dataset for Post-OCR Parsing (2019).",
+  "receiptsRequested": 10,
+  "receiptsScored": 10,
+  "accuracy": {
+    "total": {
+      "correct": 9,
+      "scored": 9,
+      "percent": 100
+    },
+    "lineItemNames": {
+      "correct": 5,
+      "scored": 10,
+      "percent": 50
+    },
+    "lineItemPrices": {
+      "correct": 8,
+      "scored": 10,
+      "percent": 80
+    }
+  },
+  "receipts": [
+    {
+      "id": 0,
+      "score": {
+        "total": true,
+        "lineItemNames": false,
+        "lineItemPrices": true
+      },
+      "seconds": 13.1319979,
+      "inputTokens": 359,
+      "outputTokens": 67,
+      "totalTokens": 2368
+    },
+    {
+      "id": 1,
+      "score": {
+        "total": true,
+        "lineItemNames": true,
+        "lineItemPrices": true
+      },
+      "seconds": 7.0571308,
+      "inputTokens": 359,
+      "outputTokens": 79,
+      "totalTokens": 838
+    },
+    {
+      "id": 2,
+      "score": {
+        "total": true,
+        "lineItemNames": false,
+        "lineItemPrices": true
+      },
+      "seconds": 6.4879771,
+      "inputTokens": 359,
+      "outputTokens": 58,
+      "totalTokens": 951
+    },
+    {
+      "id": 3,
+      "score": {
+        "total": true,
+        "lineItemNames": true,
+        "lineItemPrices": true
+      },
+      "seconds": 6.7583963,
+      "inputTokens": 359,
+      "outputTokens": 43,
+      "totalTokens": 1124
+    },
+    {
+      "id": 4,
+      "score": {
+        "total": true,
+        "lineItemNames": true,
+        "lineItemPrices": true
+      },
+      "seconds": 8.5276346,
+      "inputTokens": 359,
+      "outputTokens": 85,
+      "totalTokens": 1356
+    },
+    {
+      "id": 5,
+      "score": {
+        "total": true,
+        "lineItemNames": true,
+        "lineItemPrices": true
+      },
+      "seconds": 10.1110682,
+      "inputTokens": 359,
+      "outputTokens": 46,
+      "totalTokens": 882
+    },
+    {
+      "id": 6,
+      "score": {
+        "total": true,
+        "lineItemNames": false,
+        "lineItemPrices": true
+      },
+      "seconds": 10.8464743,
+      "inputTokens": 359,
+      "outputTokens": 127,
+      "totalTokens": 1515
+    },
+    {
+      "id": 7,
+      "score": {
+        "total": true,
+        "lineItemNames": false,
+        "lineItemPrices": false
+      },
+      "seconds": 18.2719238,
+      "inputTokens": 359,
+      "outputTokens": 69,
+      "totalTokens": 781
+    },
+    {
+      "id": 8,
+      "score": {
+        "total": true,
+        "lineItemNames": false,
+        "lineItemPrices": false
+      },
+      "seconds": 7.8411048,
+      "inputTokens": 359,
+      "outputTokens": 117,
+      "totalTokens": 1066
+    },
+    {
+      "id": 9,
+      "score": {
+        "total": null,
+        "lineItemNames": true,
+        "lineItemPrices": true
+      },
+      "seconds": 9.5181841,
+      "inputTokens": 359,
+      "outputTokens": 69,
+      "totalTokens": 803
+    }
+  ]
+}

@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Klaimin.Evaluation\Klaimin.Evaluation.csproj" />
     <ProjectReference Include="..\..\src\Klaimin.Web\Klaimin.Web.csproj" />
   </ItemGroup>
 

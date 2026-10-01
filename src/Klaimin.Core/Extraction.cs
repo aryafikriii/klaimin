@@ -20,7 +20,12 @@ public enum ExtractionOutcome
     Unavailable,
 }
 
-public record ExtractionResult(ExtractionOutcome Outcome, Extraction? Extraction = null)
+public record ExtractionResult(
+    ExtractionOutcome Outcome,
+    Extraction? Extraction = null,
+    long? InputTokens = null,
+    long? OutputTokens = null,
+    long? TotalTokens = null)
 {
     public static readonly ExtractionResult Failed = new(ExtractionOutcome.Failed);
     public static readonly ExtractionResult Unavailable = new(ExtractionOutcome.Unavailable);
@@ -75,7 +80,12 @@ public class ModelReceiptExtractor(IChatClient chat, ILogger<ModelReceiptExtract
             var date = DateOnly.TryParseExact(answer.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
                 ? parsed
                 : (DateOnly?)null;
-            return new(ExtractionOutcome.Extracted, new Extraction(answer.Total is > 0 ? answer.Total : null, date, lineItems, answer.Category));
+            return new(
+                ExtractionOutcome.Extracted,
+                new Extraction(answer.Total is > 0 ? answer.Total : null, date, lineItems, answer.Category),
+                response.Usage?.InputTokenCount,
+                response.Usage?.OutputTokenCount,
+                response.Usage?.TotalTokenCount);
         }
         // Whatever the provider throws (network, quota, bad key, malformed JSON), the claimant falls back to manual entry.
         catch (Exception error) when (!cancellation.IsCancellationRequested)
