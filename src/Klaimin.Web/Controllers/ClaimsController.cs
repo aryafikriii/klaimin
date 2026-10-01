@@ -12,7 +12,11 @@ public class NewClaimForm
     public string? Title { get; set; }
 }
 
-public record ClaimPage(Claim Claim, bool Editable, bool Decidable, string? Comment = null);
+public record ClaimPage(Claim Claim, bool Editable, bool Decidable, string? Comment = null)
+{
+    public static ClaimPage For(Claim claim, ClaimsPrincipal user, string? comment = null) =>
+        new(claim, claim.CanBeEditedBy(user.Id()), claim.CanBeDecidedBy(user.AsViewer()), comment);
+}
 
 public static class ViewerExtensions
 {
@@ -80,6 +84,5 @@ public class ClaimsController(ClaimService claims) : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private ClaimPage Page(Claim claim, string? comment = null) =>
-        new(claim, claim.CanBeEditedBy(User.Id()), claim.CanBeDecidedBy(User.AsViewer()), comment);
+    private ClaimPage Page(Claim claim, string? comment = null) => ClaimPage.For(claim, User, comment);
 }

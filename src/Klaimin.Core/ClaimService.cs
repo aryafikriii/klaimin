@@ -72,15 +72,9 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
         if (await db.Receipts.AnyAsync(receipt => receipt.ImageFile == image.File))
             return new("", "This photo is already saved as a receipt. Upload the next receipt instead.");
 
-        claim.Receipts.Add(new Receipt
-        {
-            ImageFile = image.File,
-            ImageContentType = image.ContentType,
-            Total = entry.Total,
-            Date = entry.Date,
-            CategoryId = entry.CategoryId,
-            LineItems = [.. entry.LineItems],
-        });
+        var receipt = new Receipt { ImageFile = image.File, ImageContentType = image.ContentType };
+        receipt.Confirm(entry, await CapAsync(entry.CategoryId));
+        claim.Receipts.Add(receipt);
         await db.SaveChangesAsync();
         return null;
     }
@@ -91,10 +85,21 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
 
         if (await CheckAsync(entry) is { } problem) return problem;
 
-        receipt.Total = entry.Total;
-        receipt.Date = entry.Date;
-        receipt.CategoryId = entry.CategoryId;
-        receipt.LineItems = [.. entry.LineItems];
+        receipt.Confirm(entry, await CapAsync(entry.CategoryId));
+        await db.SaveChangesAsync();
+        return null;
+    }
+
+    public async Task<Problem?> JustifyAsync(Claim claim, string actorId, Receipt receipt, string? justification)
+    {
+        RequireEditable(claim, actorId);
+        if (receipt.ExceededCap is null)
+            throw new InvalidOperationException($"Receipt {receipt.Id} has no policy flag to justify.");
+
+        if (string.IsNullOrWhiteSpace(justification))
+            return new("", $"Write why the receipt dated {receipt.DateLabel} is above the cap.");
+
+        receipt.Justification = justification.Trim();
         await db.SaveChangesAsync();
         return null;
     }
@@ -135,6 +140,9 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
         RequireEditable(claim, actorId);
 
         if (claim.Receipts.Count == 0) return new("", "Add at least one receipt before submitting.");
+        if (claim.Receipts.FirstOrDefault(receipt => receipt.NeedsJustification) is { } flagged)
+            return new("", $"Write a justification for the receipt dated {flagged.DateLabel} ({Rupiah.Format(flagged.Total)}) before submitting. "
+                + $"It is above the {flagged.Category.Name} cap.");
 
         claim.FinanceThreshold = await FinanceThresholdAsync();
         // With no manager there is nobody for the manager step, so the claim starts at finance whatever its total.
@@ -174,6 +182,9 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
         await db.SaveChangesAsync();
         return null;
     }
+
+    private Task<long> CapAsync(int categoryId) =>
+        db.Categories.Where(category => category.Id == categoryId).Select(category => category.Cap).SingleAsync();
 
     private Task<long> FinanceThresholdAsync() => db.Settings.Select(settings => settings.FinanceThreshold).SingleAsync();
 

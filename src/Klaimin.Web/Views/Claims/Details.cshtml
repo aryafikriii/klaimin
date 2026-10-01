@@ -31,7 +31,7 @@
 }
 @foreach (var receipt in claim.Receipts)
 {
-    var date = receipt.Date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
+    var date = receipt.DateLabel;
     <article class="receipt">
         <a href="@Url.Action("Image", "Receipts", new { id = receipt.Id })">
             <img src="@Url.Action("Image", "Receipts", new { id = receipt.Id })" alt="Photo of the receipt dated @date" loading="lazy" />
@@ -51,6 +51,26 @@
                     <dd class="amount">@Rupiah.Format(receipt.Total)</dd>
                 </div>
             </dl>
+            @if (receipt.ExceededCap is { } cap)
+            {
+                <div class="flag">
+                    <p><strong>Policy flag.</strong> The total is above the @receipt.Category.Name cap of @Rupiah.Format(cap).</p>
+                    @if (Model.Editable)
+                    {
+                        <form asp-controller="Receipts" asp-action="Justify" asp-route-id="@receipt.Id" method="post">
+                            <label for="justification-@receipt.Id">Justification</label>
+                            <p class="hint" id="justification-hint-@receipt.Id">Your approver reads this. The claim cannot be submitted without it.</p>
+                            <textarea id="justification-@receipt.Id" name="justification" rows="2" maxlength="1000" required
+                                      aria-describedby="justification-hint-@receipt.Id">@receipt.Justification</textarea>
+                            <button class="quiet" type="submit">Save justification</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <p><span class="hint">Justification</span><br />@receipt.Justification</p>
+                    }
+                </div>
+            }
             @if (receipt.LineItems.Count > 0)
             {
                 <table>

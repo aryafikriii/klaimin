@@ -205,14 +205,14 @@ public class ClaimTests
         using var app = new KlaiminApp();
         var client = await app.SignedInAsync("claimant");
         var submitted = await StartClaimAsync(client, "Client visit to Bandung");
-        await AddReceiptAsync(client, submitted, total: "1.250.000", category: "Lodging");
+        await AddReceiptAsync(client, submitted, total: "950.000", category: "Lodging");
         await client.PostFormAsync(submitted, Submit(submitted));
         await StartClaimAsync(client, "Printer paper");
 
         var page = await client.GetStringAsync("/");
 
         Assert.Matches(
-            "(?s)Printer paper.*Draft.*Rp 0.*Client visit to Bandung.*Awaiting manager.*Rp 1\\.250\\.000", page);
+            "(?s)Printer paper.*Draft.*Rp 0.*Client visit to Bandung.*Awaiting manager.*Rp 950\\.000", page);
         Assert.DoesNotContain("You have no claims yet.", page);
     }
 

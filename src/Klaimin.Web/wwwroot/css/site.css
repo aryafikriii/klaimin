@@ -241,6 +241,18 @@ button:disabled { opacity: 0.6; cursor: progress; }
 .actions button, .receipt-actions button { margin-top: 0; }
 .actions .aside { margin-left: auto; }
 
+.flag {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--stamp);
+  background: var(--field);
+}
+
+.flag p { margin: 0; }
+.flag p + p, .flag form { margin-top: 0.75rem; }
+.flag label { margin-top: 0; }
+.flag form > button { margin-top: 0.75rem; }
+
 .receipt-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
 
 .section { margin-top: 2rem; }

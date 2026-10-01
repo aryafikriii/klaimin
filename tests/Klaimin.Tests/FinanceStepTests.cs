@@ -8,12 +8,16 @@ public class FinanceStepTests
 
     private static void AssertStatus(string status, string page) => Assert.Matches(string.Format(Status, status), page);
 
-    /// <summary>The claimant's claim with one lodging receipt of the given total, submitted.</summary>
-    private static async Task<(HttpClient Claimant, string Claim)> SubmittedClaimAsync(KlaiminApp app, string total)
+    /// <summary>
+    /// The claimant's claim, submitted: a lodging receipt of Rp 1.000.000, which is exactly the lodging cap and the
+    /// finance threshold, plus an optional second receipt that takes the claim total above the threshold.
+    /// </summary>
+    private static async Task<(HttpClient Claimant, string Claim)> SubmittedClaimAsync(KlaiminApp app, string? extra = null)
     {
         var claimant = await app.SignedInAsync("claimant");
         var claim = await claimant.StartClaimAsync();
-        await claimant.AddReceiptAsync(claim, total, "Lodging");
+        await claimant.AddReceiptAsync(claim, "1.000.000", "Lodging");
+        if (extra is not null) await claimant.AddReceiptAsync(claim, extra, "Other");
         await claimant.SubmitAsync(claim);
         return (claimant, claim);
     }
@@ -21,7 +25,7 @@ public class FinanceStepTests
     /// <summary>A claim of Rp 1.000.001, approved by the manager and so waiting at the finance step.</summary>
     private static async Task<(HttpClient Claimant, string Claim)> ClaimAtFinanceAsync(KlaiminApp app)
     {
-        var (claimant, claim) = await SubmittedClaimAsync(app, "1.000.001");
+        var (claimant, claim) = await SubmittedClaimAsync(app, extra: "1");
         await (await app.SignedInAsync("manager")).DecideAsync(claim, "Approve", "Hotel rate checked.");
         return (claimant, claim);
     }
@@ -30,7 +34,7 @@ public class FinanceStepTests
     public async Task A_claim_at_the_threshold_is_approved_for_good_by_the_manager()
     {
         using var app = new KlaiminApp();
-        var (claimant, claim) = await SubmittedClaimAsync(app, "1.000.000");
+        var (claimant, claim) = await SubmittedClaimAsync(app);
 
         await (await app.SignedInAsync("manager")).DecideAsync(claim, "Approve");
 
@@ -42,7 +46,7 @@ public class FinanceStepTests
     public async Task A_claim_above_the_threshold_goes_to_finance_after_the_manager_approves()
     {
         using var app = new KlaiminApp();
-        var (claimant, claim) = await SubmittedClaimAsync(app, "1.000.001");
+        var (claimant, claim) = await SubmittedClaimAsync(app, extra: "1");
         var manager = await app.SignedInAsync("manager");
         var finance = await app.SignedInAsync("finance");
 

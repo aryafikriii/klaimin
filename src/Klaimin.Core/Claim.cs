@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Klaimin.Core;
 
 public enum ClaimStatus
@@ -112,6 +114,29 @@ public class Receipt
     public int CategoryId { get; set; }
     public Category Category { get; set; } = null!;
     public List<LineItem> LineItems { get; set; } = [];
+
+    /// <summary>
+    /// The policy flag: the category's cap at the time of confirmation, when the total was above it.
+    /// A later change to the cap leaves it alone.
+    /// </summary>
+    public long? ExceededCap { get; set; }
+
+    public string? Justification { get; set; }
+
+    public bool NeedsJustification => ExceededCap is not null && string.IsNullOrWhiteSpace(Justification);
+
+    public string DateLabel => Date.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
+
+    /// <summary>Takes the fields the claimant confirmed and raises or clears the policy flag against the cap in force now.</summary>
+    public void Confirm(ReceiptEntry entry, long cap)
+    {
+        Total = entry.Total;
+        Date = entry.Date;
+        CategoryId = entry.CategoryId;
+        LineItems = [.. entry.LineItems];
+        ExceededCap = entry.Total > cap ? cap : null;
+        if (ExceededCap is null) Justification = null;
+    }
 }
 
 public class LineItem

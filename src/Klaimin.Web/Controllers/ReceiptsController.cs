@@ -141,6 +141,18 @@ public class ReceiptsController(
         return RedirectToAction("Details", "Claims", new { id = claim.Id });
     }
 
+    [HttpPost]
+    public async Task<IActionResult> Justify(int id, string? justification)
+    {
+        if (await EditableReceiptAsync(id) is not var (claim, receipt) || receipt.ExceededCap is null) return NotFound();
+
+        var problem = await claims.JustifyAsync(claim, User.Id(), receipt, justification);
+        if (problem is null) return RedirectToAction("Details", "Claims", new { id = claim.Id });
+
+        ModelState.AddModelError(problem.Field, problem.Message);
+        return View("~/Views/Claims/Details.cshtml", ClaimPage.For(claim, User));
+    }
+
     /// <summary>The image of an upload that is not a receipt yet, for the person who uploaded it.</summary>
     public IActionResult Pending(int id, string upload)
     {
