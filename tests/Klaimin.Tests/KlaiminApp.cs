@@ -1,11 +1,14 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using Klaimin.Core;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Klaimin.Tests;
 
-/// <summary>The real app, in memory, on its own temporary SQLite file and image folder.</summary>
+/// <summary>The real app, in memory, on its own temporary SQLite file and image folder, with extraction answered by the test.</summary>
 public sealed class KlaiminApp : WebApplicationFactory<Program>
 {
     public const string Password = "Receipt-2026!";
@@ -15,6 +18,12 @@ public sealed class KlaiminApp : WebApplicationFactory<Program>
 
     public string EnvironmentName { get; init; } = "Development";
 
+    /// <summary>What the fake extraction adapter answers for every upload.</summary>
+    public ExtractionResult Extraction { get; set; } = ExtractionResult.Failed;
+
+    /// <summary>Leaves the app's own extraction adapter in place instead of the fake.</summary>
+    public bool OwnExtractor { get; init; }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(EnvironmentName);
@@ -22,6 +31,15 @@ public sealed class KlaiminApp : WebApplicationFactory<Program>
         builder.UseSetting("ConnectionStrings:Klaimin", $"Data Source={_database};Pooling=False");
         builder.UseSetting("Seed:Password", Password);
         builder.UseSetting("Storage:ReceiptImages", _images);
+        if (!OwnExtractor)
+            builder.ConfigureTestServices(services => services.AddSingleton<IReceiptExtractor>(new FakeExtractor(this)));
+    }
+
+    private sealed class FakeExtractor(KlaiminApp app) : IReceiptExtractor
+    {
+        public Task<ExtractionResult> ExtractAsync(
+            byte[] image, string contentType, IReadOnlyList<string> categories, CancellationToken cancellation = default) =>
+            Task.FromResult(app.Extraction);
     }
 
     public async Task<HttpClient> SignedInAsync(string role)
@@ -56,6 +74,36 @@ public static partial class HttpClientExtensions
         multipart.Add(new ByteArrayContent(file.Value.Bytes), file.Value.Field, file.Value.FileName);
         return await client.PostAsync(action, multipart);
     }
+
+    public static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
+
+    /// <summary>Starts a claim and returns the address of its page.</summary>
+    public static async Task<string> StartClaimAsync(this HttpClient client, string title = "Client visit to Bandung")
+    {
+        var response = await client.PostFormAsync("/Claims/New", "/Claims/New", new() { ["Title"] = title });
+        return response.RequestMessage!.RequestUri!.AbsolutePath;
+    }
+
+    public static string UploadForm(string claim) => claim.Replace("/Claims/Details/", "/Receipts/New/");
+
+    public static Task<HttpResponseMessage> UploadAsync(
+        this HttpClient client, string claim, byte[]? image = null, string fileName = "receipt.png") =>
+        client.PostFormAsync(UploadForm(claim), UploadForm(claim), file: ("Image", fileName, image ?? Png));
+
+    /// <summary>Confirms the upload shown on a confirmation page with the given fields.</summary>
+    public static Task<HttpResponseMessage> ConfirmAsync(
+        this HttpClient client, string claim, string confirmPage, Dictionary<string, string> fields)
+    {
+        fields["Upload"] = WebUtility.HtmlDecode(UploadToken().Match(confirmPage).Groups[1].Value);
+        return client.PostFormAsync(claim, claim.Replace("/Claims/Details/", "/Receipts/Confirm/"), fields);
+    }
+
+    /// <summary>The id of a category as offered on a confirmation page.</summary>
+    public static string CategoryId(string confirmPage, string category) =>
+        Regex.Match(confirmPage, $"<option value=\"(\\d+)\"(?: selected=\"selected\")?>{category}</option>").Groups[1].Value;
+
+    [GeneratedRegex("name=\"Upload\" value=\"([^\"]+)\"")]
+    private static partial Regex UploadToken();
 
     public static Task<HttpResponseMessage> SignInAsync(this HttpClient client, string email, string password = KlaiminApp.Password) =>
         client.PostFormAsync("/Account/Login", "/Account/Login", new() { ["Email"] = email, ["Password"] = password });

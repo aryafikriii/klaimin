@@ -9,7 +9,7 @@ public record ReceiptEntry(long Total, DateOnly Date, int CategoryId, IReadOnlyL
 public record Problem(string Field, string Message);
 
 /// <summary>Owns a claim from its first draft onwards. Status and visibility rules live here and on <see cref="Claim"/>.</summary>
-public class ClaimService(KlaiminDb db, ReceiptImages images)
+public class ClaimService(KlaiminDb db)
 {
     public Task<List<Claim>> MineAsync(string claimantId) =>
         db.Claims.Include(claim => claim.Receipts)
@@ -50,8 +50,8 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
         return claim?.Receipts.Single(receipt => receipt.Id == receiptId);
     }
 
-    public async Task<Problem?> AddReceiptAsync(
-        Claim claim, string actorId, ReceiptEntry entry, Stream image, long imageLength)
+    /// <summary>Turns a stored image and the fields the claimant confirmed into a receipt on the claim.</summary>
+    public async Task<Problem?> AddReceiptAsync(Claim claim, string actorId, ReceiptEntry entry, StoredImage image)
     {
         RequireEditable(claim, actorId);
 
@@ -60,20 +60,13 @@ public class ClaimService(KlaiminDb db, ReceiptImages images)
             return new("Date", "The receipt date cannot be in the future.");
         if (!await db.Categories.AnyAsync(category => category.Id == entry.CategoryId && category.IsActive))
             return new("CategoryId", "Choose a category from the list.");
-        if (imageLength > ReceiptImages.MaxBytes)
-            return new("Image", "The image is larger than 5 MB. Choose a smaller photo of the receipt.");
-
-        using var buffer = new MemoryStream();
-        await image.CopyToAsync(buffer);
-        var bytes = buffer.ToArray();
-        var contentType = ReceiptImages.ContentTypeOf(bytes);
-        if (contentType is null)
-            return new("Image", "The file is not a JPEG, PNG, or WebP image. Choose a photo of the receipt.");
+        if (await db.Receipts.AnyAsync(receipt => receipt.ImageFile == image.File))
+            return new("", "This photo is already saved as a receipt. Upload the next receipt instead.");
 
         claim.Receipts.Add(new Receipt
         {
-            ImageFile = await images.SaveAsync(bytes),
-            ImageContentType = contentType,
+            ImageFile = image.File,
+            ImageContentType = image.ContentType,
             Total = entry.Total,
             Date = entry.Date,
             CategoryId = entry.CategoryId,

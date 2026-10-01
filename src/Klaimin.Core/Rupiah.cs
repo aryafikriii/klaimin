@@ -5,7 +5,7 @@ namespace Klaimin.Core;
 /// <summary>Whole Rupiah, written the Indonesian way: Rp 1.250.000.</summary>
 public static class Rupiah
 {
-    private static readonly NumberFormatInfo Dots = new() { NumberGroupSeparator = "." };
+    public static readonly NumberFormatInfo Dots = new() { NumberGroupSeparator = "." };
 
     public static string Format(long amount) => "Rp " + amount.ToString("N0", Dots);
 

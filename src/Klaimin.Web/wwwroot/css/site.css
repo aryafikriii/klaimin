@@ -197,6 +197,36 @@ h1 + .summary dd.amount { font-size: 1.5rem; line-height: 1.2; }
   .receipt img { max-width: 9rem; }
 }
 
+.confirm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+  gap: 2rem;
+  align-items: start;
+}
+
+.confirm img {
+  display: block;
+  max-width: 100%;
+  max-height: 80vh;
+  border: 1px solid var(--line);
+}
+
+.confirm label:first-of-type { margin-top: 0; }
+
+@media (max-width: 48rem) {
+  .confirm { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  .confirm img { max-height: 24rem; }
+}
+
+.notice {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--stamp);
+  background: var(--field);
+}
+
+button:disabled { opacity: 0.6; cursor: progress; }
+
 .actions {
   display: flex;
   flex-wrap: wrap;

@@ -5,37 +5,36 @@ namespace Klaimin.Tests;
 
 public class ClaimTests
 {
-    private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
+    private static readonly byte[] Png = HttpClientExtensions.Png;
     private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4];
     private static readonly byte[] WebP = [.. "RIFF"u8, 0, 0, 0, 0, .. "WEBP"u8, 1, 2];
 
-    /// <summary>Starts a claim and returns the address of its page.</summary>
-    private static async Task<string> StartClaimAsync(HttpClient client, string title = "Client visit to Bandung")
-    {
-        var response = await client.PostFormAsync("/Claims/New", "/Claims/New", new() { ["Title"] = title });
-        return response.RequestMessage!.RequestUri!.AbsolutePath;
-    }
+    private static Task<string> StartClaimAsync(HttpClient client, string title = "Client visit to Bandung") =>
+        client.StartClaimAsync(title);
 
-    private static string ReceiptForm(string claim) => claim.Replace("/Claims/Details/", "/Receipts/New/");
+    private static string ReceiptForm(string claim) => HttpClientExtensions.UploadForm(claim);
 
     private static string Submit(string claim) => claim.Replace("Details", "Submit");
 
+    /// <summary>Uploads an image and confirms it by hand. Returns the upload response when the upload itself is refused.</summary>
     private static async Task<HttpResponseMessage> AddReceiptAsync(
         HttpClient client, string claim, byte[]? image = null, string fileName = "receipt.png",
         string total = "125.000", string category = "Meals")
     {
-        var page = await client.GetStringAsync(ReceiptForm(claim));
-        var categoryId = Regex.Match(page, $"<option value=\"(\\d+)\">{category}</option>").Groups[1].Value;
-        return await client.PostFormAsync(ReceiptForm(claim), ReceiptForm(claim), new()
+        var uploaded = await client.UploadAsync(claim, image, fileName);
+        var page = await uploaded.Content.ReadAsStringAsync();
+        if (!page.Contains("name=\"Upload\"")) return uploaded;
+
+        return await client.ConfirmAsync(claim, page, new()
         {
             ["Total"] = total,
             ["Date"] = "2026-09-14",
-            ["CategoryId"] = categoryId,
+            ["CategoryId"] = HttpClientExtensions.CategoryId(page, category),
             ["LineItems[0].Name"] = "Nasi goreng",
             ["LineItems[0].Price"] = "45.000",
             ["LineItems[1].Name"] = "Es teh",
             ["LineItems[1].Price"] = "8000",
-        }, ("Image", fileName, image ?? Png));
+        });
     }
 
     private static string ImageAddress(string claimPage) =>

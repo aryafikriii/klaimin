@@ -1,5 +1,8 @@
 namespace Klaimin.Core;
 
+/// <summary>An accepted image on disk: its file name in the store and the type its content says it is.</summary>
+public record StoredImage(string File, string ContentType);
+
 /// <summary>Receipt images on local disk, in a folder the web server does not serve.</summary>
 public class ReceiptImages(string root)
 {
@@ -14,12 +17,23 @@ public class ReceiptImages(string root)
         _ => null,
     };
 
-    public async Task<string> SaveAsync(byte[] bytes)
+    // ponytail: an upload that is never confirmed leaves its file behind. Sweep unreferenced files on a schedule if disk use matters.
+    public async Task<(StoredImage? Image, Problem? Problem)> TryStoreAsync(Stream upload, long length)
     {
+        if (length > MaxBytes)
+            return (null, new("Image", "The image is larger than 5 MB. Choose a smaller photo of the receipt."));
+
+        using var buffer = new MemoryStream();
+        await upload.CopyToAsync(buffer);
+        var bytes = buffer.ToArray();
+        var contentType = ContentTypeOf(bytes);
+        if (contentType is null)
+            return (null, new("Image", "The file is not a JPEG, PNG, or WebP image. Choose a photo of the receipt."));
+
         Directory.CreateDirectory(root);
         var file = Guid.NewGuid().ToString("N");
         await File.WriteAllBytesAsync(Path.Combine(root, file), bytes);
-        return file;
+        return (new(file, contentType), null);
     }
 
     public string PathOf(string file) => Path.Combine(root, file);

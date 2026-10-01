@@ -13,6 +13,7 @@ builder.Services.AddSingleton(services => new ReceiptImages(Path.Combine(
     services.GetRequiredService<IWebHostEnvironment>().ContentRootPath,
     services.GetRequiredService<IConfiguration>()["Storage:ReceiptImages"] ?? "App_Data/receipts")));
 builder.Services.AddScoped<ClaimService>();
+builder.Services.AddReceiptExtraction(builder.Configuration);
 
 // Every page needs a signed-in user unless it opts out. A filter rather than a fallback policy,
 // so the stylesheet stays reachable from the sign-in page.

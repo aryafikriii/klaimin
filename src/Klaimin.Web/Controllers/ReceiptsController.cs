@@ -1,8 +1,16 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography;
 using Klaimin.Core;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Klaimin.Web.Controllers;
+
+public class UploadForm
+{
+    [Required(ErrorMessage = "Choose a photo of the receipt.")]
+    public IFormFile? Image { get; set; }
+}
 
 public class LineItemForm
 {
@@ -12,8 +20,8 @@ public class LineItemForm
 
 public class ReceiptForm
 {
-    [Required(ErrorMessage = "Choose a photo of the receipt.")]
-    public IFormFile? Image { get; set; }
+    /// <summary>Names the uploaded image this form confirms. Sealed so it cannot be pointed at another file or claim.</summary>
+    public string Upload { get; set; } = "";
 
     public string? Total { get; set; }
 
@@ -23,23 +31,66 @@ public class ReceiptForm
     [Required(ErrorMessage = "Choose a category from the list.")]
     public int? CategoryId { get; set; }
 
-    public List<LineItemForm> LineItems { get; set; } = [new(), new(), new()];
+    public List<LineItemForm> LineItems { get; set; } = [];
 }
 
-public class ReceiptsController(ClaimService claims, ReceiptImages images) : Controller
+public class ReceiptsController(
+    ClaimService claims, ReceiptImages images, IReceiptExtractor extractor, IDataProtectionProvider protection) : Controller
 {
+    private const int BlankRows = 3;
+
+    private readonly IDataProtector _uploads = protection.CreateProtector("Klaimin.ReceiptUpload");
+
     [HttpGet]
-    public async Task<IActionResult> New(int id)
+    public async Task<IActionResult> New(int id) =>
+        await EditableClaimAsync(id) is null ? NotFound() : View(new UploadForm());
+
+    [HttpPost]
+    public async Task<IActionResult> New(int id, UploadForm upload, CancellationToken cancellation)
     {
         if (await EditableClaimAsync(id) is null) return NotFound();
-        return await FormAsync(new ReceiptForm());
+        if (!ModelState.IsValid) return View(upload);
+
+        await using var stream = upload.Image!.OpenReadStream();
+        var (image, problem) = await images.TryStoreAsync(stream, upload.Image.Length);
+        if (image is null)
+        {
+            ModelState.AddModelError(problem!.Field, problem.Message);
+            return View(upload);
+        }
+
+        var categories = await claims.ActiveCategoriesAsync();
+        var bytes = await System.IO.File.ReadAllBytesAsync(images.PathOf(image.File), cancellation);
+        var result = await extractor.ExtractAsync(
+            bytes, image.ContentType, [.. categories.Select(category => category.Name)], cancellation);
+        var extraction = result.Extraction;
+
+        ViewData["Notice"] = result.Outcome switch
+        {
+            ExtractionOutcome.Extracted => "These fields were read from the photo. Check each one against the receipt before you confirm.",
+            ExtractionOutcome.Failed => "The receipt could not be read automatically. Enter the fields yourself.",
+            _ => "Automatic reading is not set up on this server. Enter the fields yourself.",
+        };
+        var form = new ReceiptForm
+        {
+            Upload = _uploads.Protect($"{User.Id()}|{id}|{image.File}|{image.ContentType}"),
+            Total = extraction?.Total?.ToString("N0", Rupiah.Dots),
+            Date = extraction?.Date,
+            // The model's answer only counts when it names a category that exists and is active.
+            CategoryId = categories
+                .FirstOrDefault(category => category.Name.Equals(extraction?.Category?.Trim(), StringComparison.OrdinalIgnoreCase))?.Id,
+            LineItems = [.. (extraction?.LineItems ?? [])
+                .Select(item => new LineItemForm { Name = item.Name, Price = item.Price.ToString("N0", Rupiah.Dots) })],
+        };
+        return await ConfirmFormAsync(form);
     }
 
     [HttpPost]
-    public async Task<IActionResult> New(int id, ReceiptForm form)
+    public async Task<IActionResult> Confirm(int id, ReceiptForm form)
     {
         var claim = await EditableClaimAsync(id);
-        if (claim is null) return NotFound();
+        var image = Unseal(form.Upload, id);
+        if (claim is null || image is null) return NotFound();
 
         if (!Rupiah.TryParse(form.Total, out var total))
             ModelState.AddModelError(nameof(form.Total), "Enter the total in whole Rupiah, for example 125.000.");
@@ -53,15 +104,21 @@ public class ReceiptsController(ClaimService claims, ReceiptImages images) : Con
                 ModelState.TryAddModelError(nameof(form.LineItems), "Give each line item a name and a price in whole Rupiah, or leave the row empty.");
         }
 
-        if (!ModelState.IsValid) return await FormAsync(form);
+        if (!ModelState.IsValid) return await ConfirmFormAsync(form);
 
-        await using var stream = form.Image!.OpenReadStream();
         var problem = await claims.AddReceiptAsync(
-            claim, User.Id(), new ReceiptEntry(total, form.Date!.Value, form.CategoryId!.Value, lineItems), stream, form.Image.Length);
+            claim, User.Id(), new ReceiptEntry(total, form.Date!.Value, form.CategoryId!.Value, lineItems), image);
         if (problem is null) return RedirectToAction("Details", "Claims", new { id });
 
         ModelState.AddModelError(problem.Field, problem.Message);
-        return await FormAsync(form);
+        return await ConfirmFormAsync(form);
+    }
+
+    /// <summary>The image of an upload that is not a receipt yet, for the person who uploaded it.</summary>
+    public IActionResult Pending(int id, string upload)
+    {
+        var image = Unseal(upload, id);
+        return image is null ? NotFound() : PhysicalFile(images.PathOf(image.File), image.ContentType);
     }
 
     public async Task<IActionResult> Image(int id)
@@ -76,9 +133,26 @@ public class ReceiptsController(ClaimService claims, ReceiptImages images) : Con
         return claim?.CanBeEditedBy(User.Id()) == true ? claim : null;
     }
 
-    private async Task<IActionResult> FormAsync(ReceiptForm form)
+    private StoredImage? Unseal(string? upload, int claimId)
     {
+        try
+        {
+            return _uploads.Unprotect(upload ?? "").Split('|') is [var user, var claim, var file, var contentType]
+                && user == User.Id() && claim == claimId.ToString()
+                    ? new StoredImage(file, contentType)
+                    : null;
+        }
+        catch (Exception error) when (error is CryptographicException or FormatException)
+        {
+            return null;
+        }
+    }
+
+    private async Task<IActionResult> ConfirmFormAsync(ReceiptForm form)
+    {
+        while (form.LineItems.Count < BlankRows || !string.IsNullOrWhiteSpace(form.LineItems[^1].Name + form.LineItems[^1].Price))
+            form.LineItems.Add(new LineItemForm());
         ViewData["Categories"] = await claims.ActiveCategoriesAsync();
-        return View(form);
+        return View("Confirm", form);
     }
 }

@@ -1,53 +1,16 @@
-@model ReceiptForm
+@model UploadForm
 @{
     ViewData["Title"] = "Add receipt";
-    var categories = (List<Category>)ViewData["Categories"]!;
-    var today = DateTime.Now.ToString("yyyy-MM-dd");
 }
 <div class="narrow">
     <h1>Add receipt</h1>
-    <form asp-action="New" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post" enctype="multipart/form-data">
+    <form asp-action="New" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post" enctype="multipart/form-data"
+          data-busy-label="Reading the receipt…">
         <label asp-for="Image">Photo of the receipt</label>
-        <p class="hint" id="image-hint">JPEG, PNG, or WebP, up to 5 MB.</p>
+        <p class="hint" id="image-hint">JPEG, PNG, or WebP, up to 5 MB. The fields are read from the photo for you to check.</p>
         <input asp-for="Image" accept="image/jpeg,image/png,image/webp" required aria-describedby="image-hint" />
         <span asp-validation-for="Image" class="error"></span>
-
-        <label asp-for="Total"></label>
-        <p class="hint" id="total-hint">Whole Rupiah, as printed on the receipt.</p>
-        <input asp-for="Total" inputmode="numeric" required aria-describedby="total-hint" />
-        <span asp-validation-for="Total" class="error"></span>
-
-        <label asp-for="Date"></label>
-        <input asp-for="Date" type="date" max="@today" required />
-        <span asp-validation-for="Date" class="error"></span>
-
-        <label asp-for="CategoryId">Category</label>
-        <select asp-for="CategoryId" required>
-            <option value="">Choose a category</option>
-            @foreach (var category in categories)
-            {
-                <option value="@category.Id">@category.Name</option>
-            }
-        </select>
-        <span asp-validation-for="CategoryId" class="error"></span>
-
-        <fieldset>
-            <legend>Line items</legend>
-            <p class="hint">What was bought and its price. Empty rows are ignored.</p>
-            <div data-line-items>
-                @for (var i = 0; i < Model.LineItems.Count; i++)
-                {
-                    <div class="line-item">
-                        <input asp-for="LineItems[i].Name" aria-label="Line item @(i + 1) name" placeholder="Item" />
-                        <input asp-for="LineItems[i].Price" inputmode="numeric" aria-label="Line item @(i + 1) price" placeholder="Price" />
-                    </div>
-                }
-            </div>
-            <span asp-validation-for="LineItems" class="error"></span>
-            <button class="quiet" type="button" data-add-line-item hidden>Add another line item</button>
-        </fieldset>
-
-        <button type="submit">Save receipt</button>
+        <button type="submit">Upload photo</button>
     </form>
 </div>
-<script src="~/js/receipt-form.js" asp-append-version="true"></script>
+<script src="~/js/receipt.js" asp-append-version="true"></script>
