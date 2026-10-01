@@ -98,6 +98,27 @@ public static partial class HttpClientExtensions
         return client.PostFormAsync(claim, claim.Replace("/Claims/Details/", "/Receipts/Confirm/"), fields);
     }
 
+    /// <summary>Uploads a receipt image and confirms it with fields typed by hand.</summary>
+    public static async Task<HttpResponseMessage> AddReceiptAsync(
+        this HttpClient client, string claim, string total = "125.000", string category = "Meals")
+    {
+        var page = await (await client.UploadAsync(claim)).Content.ReadAsStringAsync();
+        return await client.ConfirmAsync(claim, page, new()
+        {
+            ["Total"] = total,
+            ["Date"] = "2026-09-14",
+            ["CategoryId"] = CategoryId(page, category),
+        });
+    }
+
+    public static Task<HttpResponseMessage> SubmitAsync(this HttpClient client, string claim) =>
+        client.PostFormAsync(claim, claim.Replace("Details", "Submit"));
+
+    /// <summary>Decides a claim as an approver would from the claim page: kind is Approve, Return, or Reject.</summary>
+    public static Task<HttpResponseMessage> DecideAsync(
+        this HttpClient client, string claim, string kind, string comment = "") =>
+        client.PostFormAsync("/", claim.Replace("Details", "Decide"), new() { ["kind"] = kind, ["comment"] = comment });
+
     /// <summary>The id of a category as offered on a confirmation page.</summary>
     public static string CategoryId(string confirmPage, string category) =>
         Regex.Match(confirmPage, $"<option value=\"(\\d+)\"(?: selected=\"selected\")?>{category}</option>").Groups[1].Value;

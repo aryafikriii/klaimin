@@ -12,7 +12,7 @@ public class NewClaimForm
     public string? Title { get; set; }
 }
 
-public record ClaimPage(Claim Claim, bool Editable);
+public record ClaimPage(Claim Claim, bool Editable, bool Decidable, string? Comment = null);
 
 public static class ViewerExtensions
 {
@@ -41,7 +41,7 @@ public class ClaimsController(ClaimService claims) : Controller
     public async Task<IActionResult> Details(int id)
     {
         var claim = await claims.FindAsync(id, User.AsViewer());
-        return claim is null ? NotFound() : View(new ClaimPage(claim, claim.CanBeEditedBy(User.Id())));
+        return claim is null ? NotFound() : View(Page(claim));
     }
 
     [HttpPost]
@@ -54,6 +54,22 @@ public class ClaimsController(ClaimService claims) : Controller
         if (problem is null) return RedirectToAction(nameof(Details), new { id });
 
         ModelState.AddModelError("", problem.Message);
-        return View(nameof(Details), new ClaimPage(claim, Editable: true));
+        return View(nameof(Details), Page(claim));
     }
+
+    [HttpPost]
+    public async Task<IActionResult> Decide(int id, DecisionKind kind, string? comment)
+    {
+        var claim = await claims.FindAsync(id, User.AsViewer());
+        if (claim is null || !claim.CanBeDecidedBy(User.Id()) || !Enum.IsDefined(kind)) return NotFound();
+
+        var problem = await claims.DecideAsync(claim, User.Id(), kind, comment);
+        if (problem is null) return RedirectToAction("Index", "Approvals");
+
+        ModelState.AddModelError(problem.Field, problem.Message);
+        return View(nameof(Details), Page(claim, comment));
+    }
+
+    private ClaimPage Page(Claim claim, string? comment = null) =>
+        new(claim, claim.CanBeEditedBy(User.Id()), claim.CanBeDecidedBy(User.Id()), comment);
 }

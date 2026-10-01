@@ -1,0 +1,34 @@
+@using System.Globalization
+@model List<Claim>
+@{
+    ViewData["Title"] = "Approvals";
+}
+<h1>Approvals</h1>
+@if (Model.Count == 0)
+{
+    <p class="empty">No claims are waiting for your decision.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">Claim</th>
+                <th scope="col">Claimant</th>
+                <th scope="col">Submitted</th>
+                <th scope="col" class="amount">Claim total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var claim in Model)
+            {
+                <tr>
+                    <td><a asp-controller="Claims" asp-action="Details" asp-route-id="@claim.Id">@claim.Title</a></td>
+                    <td>@claim.Claimant.Email</td>
+                    <td>@claim.SubmittedAt?.ToLocalTime().ToString("d MMM yyyy", CultureInfo.InvariantCulture)</td>
+                    <td class="amount">@Rupiah.Format(claim.Total)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

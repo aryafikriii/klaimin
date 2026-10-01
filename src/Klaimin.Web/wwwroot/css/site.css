@@ -53,6 +53,9 @@ body {
   text-decoration: none;
 }
 
+.site-header nav { display: flex; gap: 1.25rem; margin-right: auto; }
+.site-header nav a { padding: 0.625rem 0; }
+
 .session {
   display: flex;
   align-items: center;
@@ -103,7 +106,7 @@ label, legend {
 
 .hint { margin: 0 0 0.25rem; color: var(--muted); font-size: 0.875rem; }
 
-input, select {
+input, select, textarea {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
@@ -236,6 +239,17 @@ button:disabled { opacity: 0.6; cursor: progress; }
 }
 
 .actions button { margin-top: 0; }
+
+.section { margin-top: 2rem; }
+
+.decisions { margin: 0 0 2rem; padding: 0; list-style: none; }
+.decisions li { padding: 0.75rem 0; border-top: 1px solid var(--line); }
+.decisions p { margin: 0; }
+.decisions p + p { margin-top: 0.25rem; }
+
+.decide { max-width: 36rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.decide .actions { margin-top: 1rem; border-top: 0; padding-top: 0; }
+textarea { display: block; resize: vertical; }
 
 .switch, .switch:hover {
   display: flex;

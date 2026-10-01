@@ -12,6 +12,16 @@
 <body>
     <header class="site-header">
         <a class="brand" asp-controller="Claims" asp-action="Index">klaimin</a>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <nav aria-label="Main">
+                <a asp-controller="Claims" asp-action="Index">My claims</a>
+                @if (User.IsInRole(Roles.Manager))
+                {
+                    <a asp-controller="Approvals" asp-action="Index">Approvals</a>
+                }
+            </nav>
+        }
         <div class="session">
             <form asp-controller="Theme" asp-action="Set" method="post">
                 <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />

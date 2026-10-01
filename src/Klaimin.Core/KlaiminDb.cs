@@ -13,6 +13,8 @@ public class KlaiminDb(DbContextOptions<KlaiminDb> options) : IdentityDbContext<
     {
         base.OnModelCreating(builder);
         builder.Entity<Claim>().Property(claim => claim.Status).HasConversion<string>();
+        builder.Entity<Decision>().Property(decision => decision.Step).HasConversion<string>();
+        builder.Entity<Decision>().Property(decision => decision.Kind).HasConversion<string>();
         builder.Entity<Category>().HasIndex(category => category.Name).IsUnique();
     }
 }

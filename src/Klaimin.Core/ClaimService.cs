@@ -17,6 +17,13 @@ public class ClaimService(KlaiminDb db)
             .OrderByDescending(claim => claim.Id)
             .ToListAsync();
 
+    /// <summary>Claims waiting for this person's decision, oldest first.</summary>
+    public Task<List<Claim>> AwaitingAsync(string approverId) =>
+        db.Claims.Include(claim => claim.Receipts).Include(claim => claim.Claimant)
+            .Where(claim => claim.Status == ClaimStatus.AwaitingManager && claim.Claimant.ManagerId == approverId)
+            .OrderBy(claim => claim.SubmittedAt)
+            .ToListAsync();
+
     public Task<List<Category>> ActiveCategoriesAsync() =>
         db.Categories.Where(category => category.IsActive).OrderBy(category => category.Id).ToListAsync();
 
@@ -35,6 +42,7 @@ public class ClaimService(KlaiminDb db)
             .Include(claim => claim.Claimant)
             .Include(claim => claim.Receipts).ThenInclude(receipt => receipt.Category)
             .Include(claim => claim.Receipts).ThenInclude(receipt => receipt.LineItems)
+            .Include(claim => claim.Decisions).ThenInclude(decision => decision.Approver)
             .AsSplitQuery()
             .FirstOrDefaultAsync(claim => claim.Id == id);
         return found?.CanBeSeenBy(viewer) == true ? found : null;
@@ -84,6 +92,34 @@ public class ClaimService(KlaiminDb db)
 
         claim.Status = ClaimStatus.AwaitingManager;
         claim.SubmittedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return null;
+    }
+
+    public async Task<Problem?> DecideAsync(Claim claim, string approverId, DecisionKind kind, string? comment)
+    {
+        if (!claim.CanBeDecidedBy(approverId))
+            throw new InvalidOperationException($"Claim {claim.Id} cannot be decided by this person in status {claim.Status}.");
+
+        comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
+        if (kind != DecisionKind.Approve && comment is null)
+            return new("comment", "Write a comment so the claimant knows why.");
+
+        claim.Decisions.Add(new Decision
+        {
+            ApproverId = approverId,
+            Step = ApprovalStep.Manager,
+            Kind = kind,
+            Comment = comment,
+            At = DateTime.UtcNow,
+        });
+        claim.Status = kind switch
+        {
+            DecisionKind.Approve => ClaimStatus.Approved,
+            DecisionKind.Return => ClaimStatus.Returned,
+            DecisionKind.Reject => ClaimStatus.Rejected,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+        };
         await db.SaveChangesAsync();
         return null;
     }

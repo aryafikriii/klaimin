@@ -10,6 +10,13 @@
         <dt>Status</dt>
         <dd>@claim.StatusLabel</dd>
     </div>
+    @if (claim.ClaimantId != User.Id())
+    {
+        <div>
+            <dt>Claimant</dt>
+            <dd>@claim.Claimant.Email</dd>
+        </div>
+    }
     <div>
         <dt>Claim total</dt>
         <dd class="amount">@Rupiah.Format(claim.Total)</dd>
@@ -68,6 +75,40 @@
     </article>
 }
 
+@if (claim.Decisions.Count > 0)
+{
+    <h2 class="section">Decisions</h2>
+    <ol class="decisions">
+        @foreach (var decision in claim.Decisions.OrderBy(decision => decision.Id))
+        {
+            <li>
+                <p><strong>@decision.KindLabel by @decision.Approver.Email</strong></p>
+                <p class="hint">Manager step, @decision.At.ToLocalTime().ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)</p>
+                @if (decision.Comment is not null)
+                {
+                    <p>@decision.Comment</p>
+                }
+            </li>
+        }
+    </ol>
+}
+
+@if (Model.Decidable)
+{
+    <form class="decide" asp-action="Decide" asp-route-id="@claim.Id" method="post">
+        <h2>Your decision</h2>
+        <label for="comment">Comment</label>
+        <p class="hint" id="comment-hint">Needed when you return or reject the claim. The claimant will read it.</p>
+        <textarea id="comment" name="comment" rows="3" maxlength="1000" aria-describedby="comment-hint">@Model.Comment</textarea>
+        <span class="error" role="alert">@Html.ValidationMessage("comment")</span>
+        <div class="actions">
+            <button type="submit" name="kind" value="Approve">Approve</button>
+            <button class="quiet" type="submit" name="kind" value="Return">Return for revision</button>
+            <button class="quiet" type="submit" name="kind" value="Reject">Reject for good</button>
+        </div>
+    </form>
+}
+
 @if (Model.Editable)
 {
     <div class="actions">
@@ -75,7 +116,7 @@
         @if (claim.Receipts.Count > 0)
         {
             <form asp-action="Submit" asp-route-id="@claim.Id" method="post">
-                <button type="submit">Submit claim</button>
+                <button type="submit">@(claim.Status == ClaimStatus.Returned ? "Resubmit claim" : "Submit claim")</button>
             </form>
         }
     </div>
