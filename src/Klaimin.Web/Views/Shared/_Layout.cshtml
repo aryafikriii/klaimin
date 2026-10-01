@@ -1,5 +1,8 @@
+@{
+    var dark = Context.Request.Cookies[ThemeController.Cookie] == "dark";
+}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="@(dark ? "dark" : "light")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,13 +12,20 @@
 <body>
     <header class="site-header">
         <a class="brand" asp-controller="Claims" asp-action="Index">klaimin</a>
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <form class="session" asp-controller="Account" asp-action="Logout" method="post">
-                <span>@User.Identity.Name</span>
-                <button class="quiet" type="submit">Sign out</button>
+        <div class="session">
+            <form asp-controller="Theme" asp-action="Set" method="post">
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                <button class="switch" type="submit" role="switch" aria-checked="@(dark ? "true" : "false")"
+                        aria-label="Dark theme" name="theme" value="@(dark ? "light" : "dark")"><span></span></button>
             </form>
-        }
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <span>@User.Identity.Name</span>
+                <form asp-controller="Account" asp-action="Logout" method="post">
+                    <button class="quiet" type="submit">Sign out</button>
+                </form>
+            }
+        </div>
     </header>
     <main>
         @RenderBody()

@@ -4,6 +4,20 @@
   --muted: #5f5b53;
   --line: #d9d5cc;
   --stamp: #b4401f;
+  --on-stamp: #fff;
+  --field: #fff;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --paper: #1a1917;
+  --ink: #ece8df;
+  --muted: #a8a296;
+  --line: #3a3731;
+  --stamp: #e8805c;
+  --on-stamp: #1a1917;
+  --field: #24221f;
+  color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -78,7 +92,7 @@ input {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--muted);
   border-radius: 2px;
-  background: #fff;
+  background: var(--field);
   color: var(--ink);
   font: inherit;
 }
@@ -97,9 +111,39 @@ button {
 
 button.quiet { background: transparent; color: var(--ink); }
 
-button:hover { background: var(--stamp); border-color: var(--stamp); color: #fff; }
+button:hover { background: var(--stamp); border-color: var(--stamp); color: var(--on-stamp); }
 
-form > button { margin-top: 1.5rem; }
+.switch, .switch:hover {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.switch span {
+  display: block;
+  width: 2.75rem;
+  height: 1.5rem;
+  padding: 3px;
+  border: 1px solid var(--ink);
+  border-radius: 1rem;
+}
+
+.switch span::before {
+  content: "";
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.switch[aria-checked="true"] span::before { transform: translateX(1.25rem); }
+.switch:hover span { border-color: var(--stamp); }
+.switch:hover span::before { background: var(--stamp); }
+
+main form > button { margin-top: 1.5rem; }
 
 :focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
 
