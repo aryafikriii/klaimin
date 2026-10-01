@@ -8,27 +8,29 @@
 </div>
 @if (Model.Count == 0)
 {
-    <p class="empty">You have no claims yet.</p>
+    <p class="empty">You have no claims yet. Start one with New claim, then add a photo of each receipt.</p>
 }
 else
 {
-    <table>
-        <thead>
-            <tr>
-                <th scope="col">Claim</th>
-                <th scope="col">Status</th>
-                <th scope="col" class="amount">Claim total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var claim in Model)
-            {
+    <div class="panel ledger">
+        <table>
+            <thead>
                 <tr>
-                    <td><a asp-action="Details" asp-route-id="@claim.Id">@claim.Title</a></td>
-                    <td>@claim.StatusLabel</td>
-                    <td class="amount">@Rupiah.Format(claim.Total)</td>
+                    <th scope="col">Claim</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="amount">Claim total</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var claim in Model)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@claim.Id">@claim.Title</a></td>
+                        <td><span class="status-label" data-status="@claim.Status">@claim.StatusLabel</span></td>
+                        <td class="amount">@Rupiah.Format(claim.Total)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }

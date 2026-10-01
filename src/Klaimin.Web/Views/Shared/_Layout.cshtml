@@ -1,5 +1,10 @@
 @{
     var dark = Context.Request.Cookies[ThemeController.Cookie] == "dark";
+    var section = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    // A claim page may belong to someone else (an approver opens it from Approvals), so it marks no nav item.
+    string? Current(string controller) =>
+        section == controller && (controller != "Claims" || action is "Index" or "New") ? "page" : null;
 }
 <!DOCTYPE html>
 <html lang="en" data-theme="@(dark ? "dark" : "light")">
@@ -12,35 +17,37 @@
 </head>
 <body>
     <header class="site-header">
-        <a class="brand" asp-controller="Claims" asp-action="Index">klaimin</a>
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <nav aria-label="Main">
-                <a asp-controller="Claims" asp-action="Index">My claims</a>
-                @if (User.IsInRole(Roles.Manager) || User.IsInRole(Roles.Finance))
-                {
-                    <a asp-controller="Approvals" asp-action="Index">Approvals</a>
-                }
-                @if (User.IsInRole(Roles.Admin))
-                {
-                    <a asp-controller="Categories" asp-action="Index">Categories</a>
-                    <a asp-controller="Settings" asp-action="Index">Settings</a>
-                }
-            </nav>
-        }
-        <div class="session">
-            <form asp-controller="Theme" asp-action="Set" method="post">
-                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                <button class="switch" type="submit" role="switch" aria-checked="@(dark ? "true" : "false")"
-                        aria-label="Dark theme" name="theme" value="@(dark ? "light" : "dark")"><span></span></button>
-            </form>
+        <div class="bar">
+            <a class="brand" asp-controller="Claims" asp-action="Index"><img src="~/favicon.svg" alt="" />klaimin</a>
             @if (User.Identity?.IsAuthenticated == true)
             {
-                <span>@User.Identity.Name</span>
-                <form asp-controller="Account" asp-action="Logout" method="post">
-                    <button class="quiet" type="submit">Sign out</button>
-                </form>
+                <nav aria-label="Main">
+                    <a asp-controller="Claims" asp-action="Index" aria-current="@Current("Claims")">My claims</a>
+                    @if (User.IsInRole(Roles.Manager) || User.IsInRole(Roles.Finance))
+                    {
+                        <a asp-controller="Approvals" asp-action="Index" aria-current="@Current("Approvals")">Approvals</a>
+                    }
+                    @if (User.IsInRole(Roles.Admin))
+                    {
+                        <a asp-controller="Categories" asp-action="Index" aria-current="@Current("Categories")">Categories</a>
+                        <a asp-controller="Settings" asp-action="Index" aria-current="@Current("Settings")">Settings</a>
+                    }
+                </nav>
             }
+            <div class="session">
+                <form asp-controller="Theme" asp-action="Set" method="post">
+                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                    <button class="switch" type="submit" role="switch" aria-checked="@(dark ? "true" : "false")"
+                            aria-label="Dark theme" name="theme" value="@(dark ? "light" : "dark")"><span></span></button>
+                </form>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <span>@User.Identity.Name</span>
+                    <form asp-controller="Account" asp-action="Logout" method="post">
+                        <button class="quiet" type="submit">Sign out</button>
+                    </form>
+                }
+            </div>
         </div>
     </header>
     <main>

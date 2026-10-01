@@ -6,7 +6,7 @@
 <h1>Confirm receipt</h1>
 <div class="confirm">
     <img src="@Url.Action("Pending", new { id = claimId, upload = Model.Upload })" alt="The photo you uploaded" />
-    <form asp-action="Confirm" asp-route-id="@claimId" method="post">
+    <form class="panel" asp-action="Confirm" asp-route-id="@claimId" method="post">
         <input type="hidden" name="Upload" value="@Model.Upload" />
         @if (ViewData["Notice"] is string notice)
         {

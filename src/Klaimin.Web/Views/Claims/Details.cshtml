@@ -4,24 +4,26 @@
     var claim = Model.Claim;
     ViewData["Title"] = claim.Title;
 }
-<h1>@claim.Title</h1>
-<dl class="summary">
-    <div>
+<header class="panel sheet">
+    <h1>@claim.Title</h1>
+    <dl class="status" data-status="@claim.Status">
         <dt>Status</dt>
         <dd>@claim.StatusLabel</dd>
-    </div>
-    @if (claim.ClaimantId != User.Id())
-    {
+    </dl>
+    <dl class="facts">
+        @if (claim.ClaimantId != User.Id())
+        {
+            <div>
+                <dt>Claimant</dt>
+                <dd>@claim.Claimant.Email</dd>
+            </div>
+        }
         <div>
-            <dt>Claimant</dt>
-            <dd>@claim.Claimant.Email</dd>
+            <dt>Claim total</dt>
+            <dd class="amount">@Rupiah.Format(claim.Total)</dd>
         </div>
-    }
-    <div>
-        <dt>Claim total</dt>
-        <dd class="amount">@Rupiah.Format(claim.Total)</dd>
-    </div>
-</dl>
+    </dl>
+</header>
 <div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
 
 <h2>Receipts</h2>
@@ -29,109 +31,111 @@
 {
     <p class="empty">No receipts yet. A claim needs at least one before it can be submitted.</p>
 }
-@foreach (var receipt in claim.Receipts)
-{
-    var date = receipt.DateLabel;
-    <article class="receipt" id="receipt-@receipt.Id">
-        <a href="@Url.Action("Image", "Receipts", new { id = receipt.Id })">
-            <img src="@Url.Action("Image", "Receipts", new { id = receipt.Id })" alt="Photo of the receipt dated @date" loading="lazy" />
-        </a>
-        <div>
-            <dl class="summary">
-                <div>
-                    <dt>Date</dt>
-                    <dd>@date</dd>
-                </div>
-                <div>
-                    <dt>Category</dt>
-                    <dd>@receipt.Category.Name</dd>
-                </div>
-                <div>
+<div class="receipts">
+    @foreach (var receipt in claim.Receipts)
+    {
+        var date = receipt.DateLabel;
+        <div class="slip" id="receipt-@receipt.Id">
+            <article class="receipt">
+                <a href="@Url.Action("Image", "Receipts", new { id = receipt.Id })">
+                    <img src="@Url.Action("Image", "Receipts", new { id = receipt.Id })" alt="Photo of the receipt dated @date" loading="lazy" />
+                </a>
+                <dl>
+                    <div>
+                        <dt>Date</dt>
+                        <dd>@date</dd>
+                    </div>
+                    <div>
+                        <dt>Category</dt>
+                        <dd>@receipt.Category.Name</dd>
+                    </div>
+                </dl>
+                @if (receipt.LineItems.Count > 0)
+                {
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Line item</th>
+                                <th scope="col" class="amount">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in receipt.LineItems)
+                            {
+                                <tr>
+                                    <td>@item.Name</td>
+                                    <td class="amount">@Rupiah.Format(item.Price)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                <dl class="total">
                     <dt>Total</dt>
                     <dd class="amount">@Rupiah.Format(receipt.Total)</dd>
-                </div>
-            </dl>
-            @if (receipt.ExceededCap is { } cap)
-            {
-                <div class="flag">
-                    <p><strong>Policy flag.</strong> The total is above the @receipt.Category.Name cap of @Rupiah.Format(cap).</p>
-                    @if (Model.Editable)
-                    {
-                        <form asp-controller="Receipts" asp-action="Justify" asp-route-id="@receipt.Id" method="post">
-                            <label for="justification-@receipt.Id">Justification</label>
-                            <p class="hint" id="justification-hint-@receipt.Id">Your approver reads this. The claim cannot be submitted without it.</p>
-                            <textarea id="justification-@receipt.Id" name="justification" rows="2" maxlength="1000" required
-                                      aria-describedby="justification-hint-@receipt.Id">@receipt.Justification</textarea>
-                            <button class="quiet" type="submit">Save justification</button>
-                        </form>
-                    }
-                    else
-                    {
-                        <p><span class="hint">Justification</span><br />@receipt.Justification</p>
-                    }
-                </div>
-            }
-            @if (receipt.DuplicateOf is { } other)
-            {
-                <div class="flag">
-                    <p>
-                        <strong>Duplicate flag.</strong>
-                        @(receipt.HasSamePhotoAs(other)
-                            ? "The photo is identical to the photo on another receipt."
-                            : "The total and date match another receipt from the same claimant.")
-                    </p>
-                    @if (other.Claim.CanBeSeenBy(User.AsViewer()))
-                    {
-                        <p><a asp-action="Details" asp-route-id="@other.ClaimId" asp-fragment="receipt-@other.Id">Open the other receipt</a></p>
-                    }
-                    else
-                    {
-                        <p class="hint">The other receipt is on a claim you cannot open.</p>
-                    }
-                </div>
-            }
-            @if (receipt.LineItems.Count > 0)
-            {
-                <table>
-                    <thead>
-                        <tr>
-                            <th scope="col">Line item</th>
-                            <th scope="col" class="amount">Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in receipt.LineItems)
+                </dl>
+                @if (receipt.ExceededCap is { } cap)
+                {
+                    <div class="flag">
+                        <p><strong>Policy flag.</strong> The total is above the @receipt.Category.Name cap of @Rupiah.Format(cap).</p>
+                        @if (Model.Editable)
                         {
-                            <tr>
-                                <td>@item.Name</td>
-                                <td class="amount">@Rupiah.Format(item.Price)</td>
-                            </tr>
+                            <form asp-controller="Receipts" asp-action="Justify" asp-route-id="@receipt.Id" method="post">
+                                <label for="justification-@receipt.Id">Justification</label>
+                                <p class="hint" id="justification-hint-@receipt.Id">Your approver reads this. The claim cannot be submitted without it.</p>
+                                <textarea id="justification-@receipt.Id" name="justification" rows="2" maxlength="1000" required
+                                          aria-describedby="justification-hint-@receipt.Id">@receipt.Justification</textarea>
+                                <button class="quiet" type="submit">Save justification</button>
+                            </form>
                         }
-                    </tbody>
-                </table>
-            }
-            @if (Model.Editable)
-            {
-                <div class="receipt-actions">
-                    <a class="button quiet" asp-controller="Receipts" asp-action="Edit" asp-route-id="@receipt.Id"
-                       aria-label="Edit the receipt dated @date">Edit</a>
-                    <form asp-controller="Receipts" asp-action="Remove" asp-route-id="@receipt.Id" method="post"
-                          onsubmit="return confirm('Remove this receipt and its photo from the claim?')">
-                        <button class="quiet" type="submit" aria-label="Remove the receipt dated @date">Remove receipt</button>
-                    </form>
-                </div>
-            }
+                        else
+                        {
+                            <p><span class="hint">Justification</span><br />@receipt.Justification</p>
+                        }
+                    </div>
+                }
+                @if (receipt.DuplicateOf is { } other)
+                {
+                    <div class="flag">
+                        <p>
+                            <strong>Duplicate flag.</strong>
+                            @(receipt.HasSamePhotoAs(other)
+                                ? "The photo is identical to the photo on another receipt."
+                                : "The total and date match another receipt from the same claimant.")
+                        </p>
+                        @if (other.Claim.CanBeSeenBy(User.AsViewer()))
+                        {
+                            <p><a asp-action="Details" asp-route-id="@other.ClaimId" asp-fragment="receipt-@other.Id">Open the other receipt</a></p>
+                        }
+                        else
+                        {
+                            <p class="hint">The other receipt is on a claim you cannot open.</p>
+                        }
+                    </div>
+                }
+                @if (Model.Editable)
+                {
+                    <div class="receipt-actions">
+                        <a class="button quiet" asp-controller="Receipts" asp-action="Edit" asp-route-id="@receipt.Id"
+                           aria-label="Edit the receipt dated @date">Edit</a>
+                        <form asp-controller="Receipts" asp-action="Remove" asp-route-id="@receipt.Id" method="post"
+                              onsubmit="return confirm('Remove this receipt and its photo from the claim?')">
+                            <button class="quiet" type="submit" aria-label="Remove the receipt dated @date">Remove receipt</button>
+                        </form>
+                    </div>
+                }
+            </article>
         </div>
-    </article>
-}
+    }
+</div>
 
 @if (claim.Decisions.Count > 0)
 {
-    <h2 class="section">Decisions</h2>
-    <ol class="decisions">
+    <h2>Decisions</h2>
+    <ol class="panel ledger decisions">
         @foreach (var decision in claim.Decisions.OrderBy(decision => decision.Id))
         {
-            <li>
+            <li data-kind="@decision.Kind">
                 <p><strong>@decision.KindLabel by @decision.Approver.Email</strong></p>
                 <p class="hint">@decision.StepLabel, @decision.At.ToLocalTime().ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)</p>
                 @if (decision.Comment is not null)
@@ -145,23 +149,23 @@
 
 @if (Model.Decidable)
 {
-    <form class="decide" asp-action="Decide" asp-route-id="@claim.Id" method="post">
+    <form class="panel decide" asp-action="Decide" asp-route-id="@claim.Id" method="post">
         <h2>Your decision</h2>
         <label for="comment">Comment</label>
         <p class="hint" id="comment-hint">Needed when you return or reject the claim. The claimant will read it.</p>
         <textarea id="comment" name="comment" rows="3" maxlength="1000" aria-describedby="comment-hint">@Model.Comment</textarea>
         <span class="error" role="alert">@Html.ValidationMessage("comment")</span>
         <div class="actions">
-            <button type="submit" name="kind" value="Approve">Approve</button>
+            <button class="approve" type="submit" name="kind" value="Approve">Approve</button>
             <button class="quiet" type="submit" name="kind" value="Return">Return for revision</button>
-            <button class="quiet" type="submit" name="kind" value="Reject">Reject for good</button>
+            <button class="danger" type="submit" name="kind" value="Reject">Reject for good</button>
         </div>
     </form>
 }
 
 @if (Model.Editable)
 {
-    <div class="actions">
+    <div class="actions claim-actions">
         <a class="button quiet" asp-controller="Receipts" asp-action="New" asp-route-id="@claim.Id">Add receipt</a>
         @if (claim.Receipts.Count > 0)
         {
@@ -173,7 +177,7 @@
         {
             <form class="aside" asp-action="Delete" asp-route-id="@claim.Id" method="post"
                   onsubmit="return confirm('Delete this draft claim with all its receipts? This cannot be undone.')">
-                <button class="quiet" type="submit">Delete claim</button>
+                <button class="danger" type="submit">Delete claim</button>
             </form>
         }
     </div>

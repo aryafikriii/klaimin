@@ -4,7 +4,7 @@
 }
 <div class="narrow">
     <h1>Add receipt</h1>
-    <form asp-action="New" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post" enctype="multipart/form-data"
+    <form class="panel" asp-action="New" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post" enctype="multipart/form-data"
           data-busy-label="Reading the receipt…">
         <label asp-for="Image">Photo of the receipt</label>
         <p class="hint" id="image-hint">JPEG, PNG, or WebP, up to 5 MB. The fields are read from the photo for you to check.</p>

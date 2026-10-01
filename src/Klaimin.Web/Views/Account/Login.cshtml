@@ -5,7 +5,8 @@
 }
 <div class="narrow">
     <h1>Sign in</h1>
-    <form asp-action="Login" method="post">
+    <p class="lede">Claim back what you spent for work, from a photo of the receipt.</p>
+    <form class="panel" asp-action="Login" method="post">
         <div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
         <label asp-for="Email"></label>
         <input asp-for="Email" autocomplete="username" autofocus />
@@ -18,7 +19,7 @@
 
     @if (Environment.IsDevelopment())
     {
-        <form class="dev-accounts" asp-action="DevLogin" method="post">
+        <form class="panel dev-accounts" asp-action="DevLogin" method="post">
             <h2>Development accounts</h2>
             <p>These buttons exist only in the development environment.</p>
             @foreach (var (name, _) in Seed.Accounts)

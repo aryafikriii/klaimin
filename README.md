@@ -19,6 +19,26 @@ The claimant's manager approves, returns, or rejects the claim. A returned claim
 
 An admin manages the categories, their caps, and the finance threshold. A changed cap or threshold applies from then on and leaves earlier receipts and claims as they were.
 
+## What it looks like
+
+A submitted claim, as the claimant sees it. Its status is the stamp on the right, and each receipt is a slip with its photo, line items, and total.
+
+![A claim awaiting the manager, with two receipt slips](docs/screenshots/claim.png)
+
+A receipt above its category's cap carries a policy flag and the claimant's justification.
+
+![A receipt slip with a policy flag and its justification](docs/screenshots/flagged-receipt.png)
+
+The manager opens the claim and approves, returns, or rejects it.
+
+![The manager's decision form on a claim](docs/screenshots/approval.png)
+
+Afterwards the claim shows every decision made on it.
+
+![The approved claim with the manager's decision](docs/screenshots/approved.png)
+
+The receipt photos in these screenshots come from the CORD dataset credited below.
+
 ## Why extraction is measured
 
 A company deciding whether to trust a model with receipts needs to know how often it gets a total wrong. So the repo includes a command that runs the same extraction code over the public [CORD](https://github.com/clovaai/cord) receipt dataset and scores each field against the dataset's labels.
